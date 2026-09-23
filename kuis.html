@@ -224,6 +224,115 @@
 <div class="toast-container" id="toastContainer"></div>
 <button class="back-to-top" id="backToTop" title="Kembali ke atas" aria-label="Kembali ke atas">↑</button>
 
+<!-- ===== FLOATING AI CHATBOT WIDGET ===== -->
+<div class="chat-widget-wrapper" id="chatWidgetWrapper">
+  <!-- Floating Trigger Button -->
+  <button class="chat-widget-trigger" id="chatWidgetTrigger" aria-label="Buka Chat AI Assistant" aria-expanded="false" title="Tanya RebaBot (AI Assistant)">
+    <div class="chat-trigger-icon-box">
+      <!-- Chat SVG Icon -->
+      <svg class="chat-icon-svg chat-icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        <path d="M8 10h.01M12 10h.01M16 10h.01" stroke-width="2.5"></path>
+      </svg>
+      <!-- Close SVG Icon (shown when open) -->
+      <svg class="chat-icon-svg chat-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+      <span class="chat-sparkle-fx" aria-hidden="true">✨</span>
+    </div>
+    <span class="chat-badge" id="chatBadge" aria-label="Notifikasi AI">AI</span>
+    <span class="chat-trigger-tooltip">Tanya RebaBot ✨</span>
+  </button>
+
+  <!-- Chat Modal Window -->
+  <div class="chat-modal" id="chatWidgetModal" role="dialog" aria-modal="true" aria-labelledby="chatBotName" aria-hidden="true">
+    <!-- Header -->
+    <div class="chat-header">
+      <div class="chat-header-info">
+        <div class="chat-avatar-wrapper">
+          <img src="mascot/aset4.png" alt="Avatar RebaBot" class="chat-avatar-img">
+          <span class="chat-status-indicator" title="Online"></span>
+        </div>
+        <div class="chat-header-meta">
+          <div class="chat-bot-title-row">
+            <h3 class="chat-bot-name" id="chatBotName">RebaBot</h3>
+            <span class="chat-ai-pill">AI Assistant</span>
+          </div>
+          <span class="chat-status-text">
+            <span class="chat-status-dot"></span> Online · Siap Membantu
+          </span>
+        </div>
+      </div>
+      <div class="chat-header-actions">
+        <button class="chat-action-btn" id="chatClearBtn" title="Bersihkan Percakapan" aria-label="Bersihkan percakapan">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
+        <button class="chat-action-btn" id="chatCloseBtn" title="Tutup Chat" aria-label="Tutup chat">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Suggestion Chips Bar -->
+    <div class="chat-quick-chips" id="chatQuickChips" aria-label="Pertanyaan Cepat">
+      <button type="button" class="chat-chip" data-question="Apa itu Generasi Rebahan?">💡 Apa itu Generasi Rebahan?</button>
+      <button type="button" class="chat-chip" data-question="Bagaimana cara ikut kuis?">🎯 Cara ikut kuis?</button>
+      <button type="button" class="chat-chip" data-question="Tips atasi leher kaku & mager">🧘 Tips leher kaku</button>
+      <button type="button" class="chat-chip" data-question="Kapan Habit Tracker reset?">⏰ Reset Habit Tracker</button>
+      <button type="button" class="chat-chip" data-question="Bagaimana cara kontak tim?">📬 Kontak Tim Kami</button>
+    </div>
+
+    <!-- Messages Container -->
+    <div class="chat-messages-container" id="chatMessagesContainer" role="log" aria-live="polite">
+      <!-- Chat bubbles rendered dynamically via JavaScript -->
+    </div>
+
+    <!-- Typing Indicator -->
+    <div class="chat-typing-row" id="chatTypingRow" aria-hidden="true" style="display: none;">
+      <div class="chat-avatar-mini">
+        <img src="mascot/aset4.png" alt="RebaBot" />
+      </div>
+      <div class="chat-typing-bubble">
+        <span class="typing-dot"></span>
+        <span class="typing-dot"></span>
+        <span class="typing-dot"></span>
+        <span class="typing-text">RebaBot sedang mengetik...</span>
+      </div>
+    </div>
+
+    <!-- Input Form Area -->
+    <form class="chat-input-form" id="chatInputForm">
+      <div class="chat-input-wrapper">
+        <input 
+          type="text" 
+          id="chatInputField" 
+          class="chat-input-field" 
+          placeholder="Ketik pertanyaan seputar gaya hidup sehat..." 
+          autocomplete="off" 
+          maxlength="250"
+          aria-label="Ketik pesan chat"
+        />
+        <button type="submit" class="chat-send-btn" id="chatSendBtn" aria-label="Kirim Pesan" title="Kirim Pesan">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+      <div class="chat-footer-badge">
+        <span>Didukung oleh RebaBot AI · INVENTION 2026</span>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script src="js/script.js"></script>
 </body>
 </html>
