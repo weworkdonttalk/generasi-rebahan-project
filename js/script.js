@@ -1035,4 +1035,278 @@ document.addEventListener('DOMContentLoaded', function () {
 
     renderAll();
   }
+
+  /* =========================================================
+     7. FLOATING AI CHATBOT WIDGET (REBABOT)
+     ========================================================= */
+  const chatWidgetTrigger = document.getElementById('chatWidgetTrigger');
+  const chatWidgetModal = document.getElementById('chatWidgetModal');
+  const chatCloseBtn = document.getElementById('chatCloseBtn');
+  const chatClearBtn = document.getElementById('chatClearBtn');
+  const chatInputForm = document.getElementById('chatInputForm');
+  const chatInputField = document.getElementById('chatInputField');
+  const chatMessagesContainer = document.getElementById('chatMessagesContainer');
+  const chatTypingRow = document.getElementById('chatTypingRow');
+  const chatBadge = document.getElementById('chatBadge');
+  const chatQuickChips = document.getElementById('chatQuickChips');
+
+  if (chatWidgetTrigger && chatWidgetModal) {
+    let isTyping = false;
+    const STORAGE_KEY = 'rebahan_chatbot_history';
+
+    // Smart contextual knowledge base
+    const knowledgeBase = [
+      {
+        patterns: ['terima kasih', 'makasih', 'thanks', 'thank you', 'thx', 'nuhun', 'matur nuwun'],
+        reply: "Sama-sama! Senang bisa membantu. Tetap jaga kesehatan, kurangi rebahan non-stop, dan jangan lupa istirahatkan mata sejenak ya! ✨🌿"
+      },
+      {
+        patterns: ['apa itu', 'tentang', 'generasi rebahan', 'website ini', 'web ini', 'maksud', 'tujuan', 'latar belakang', 'invention', 'lomba', 'subtema'],
+        reply: "**Generasi Rebahan** adalah inisiatif kampanye gaya hidup digital sehat yang dikembangkan untuk kompetisi **Web Design INVENTION 2026** dengan subtema *\"Designing a Healthier Society Through the Web\"*.<br><br>Fokus kami adalah mengedukasi generasi muda agar sadar akan bahaya *sedentary lifestyle*, screen time berlebihan, dan kurang tidur, dikemas secara interaktif dan menyenangkan! 📱🌱"
+      },
+      {
+        patterns: ['kuis', 'quiz', 'skor', 'level', 'mager', 'evaluasi', 'tingkat', 'ikut kuis', 'cara kuis'],
+        reply: "Kuis Adaptif kami dirancang untuk membantumu melihat potret kebiasaan harianmu secara jujur! 🎯<br><br>Terdapat 8 pertanyaan adaptif yang mengklasifikasikan kebiasaanmu ke dalam 3 level:<br>• 🌱 **Santai Sehat** (0–33%)<br>• ⚠️ **Mulai Mager** (34–66%)<br>• 🛋️ **Rebahan Maksimal** (67–100%)<br><br><a href='kuis.html' class='chat-link-btn'>Mulai Kuis Adaptif Sekarang →</a>"
+      },
+      {
+        patterns: ['habit', 'tracker', 'kebiasaan', 'streak', 'centang', 'reset', 'jam 22', '22 00', '22:00', 'target', 'kapan reset'],
+        reply: "Fitur **Habit Tracker** kami dirancang dengan prinsip konsistensi mikro: 📅<br><br>1. Selesaikan minimal 4 dari 6 kebiasaan sehat harian untuk mengaktifkan status **Streak Api** 🔥.<br>2. Begitu dicentang dan dikonfirmasi, kebiasaan terkunci hingga jadwal reset demi kejujuran diri.<br>3. Sistem otomatis **mereset centang setiap pukul 22:00 WIB** agar kamu tidak begadang dan tidur cukup!<br><br><a href='tips.html#habitTracker' class='chat-link-btn'>Buka Habit Tracker Sekarang →</a>"
+      },
+      {
+        patterns: ['leher', 'kaku', 'pegal', 'text neck', 'mata', '20 20 20', '20-20-20', 'screen time', 'layar', 'ergonomi', 'posisi duduk', 'peregangan', 'stretch'],
+        reply: "Pegal dan leher kaku adalah tanda alarm tubuhmu! 🧘‍♂️ Berikut tips kilat dari RebaBot:<br><br>👀 **Aturan 20-20-20:** Setiap 20 menit menatap layar, alihkan pandangan ke objek sejauh 20 kaki (6 meter) selama 20 detik.<br>📐 **Posisi Layar Sejajar Mata:** Jangan biarkan leher menunduk lebih dari 15° untuk mencegah beban 27 kg pada servikal.<br>🙆 **Peregangan Dagu & Bahu:** Tarik bahu ke belakang dan tahan selama 10 detik setiap 1 jam.<br><br><a href='tips.html' class='chat-link-btn'>Pelajari Tips & Ergonomi Lengkap →</a>"
+      },
+      {
+        patterns: ['tidur', 'insomnia', 'begadang', 'susah tidur', 'blue light', 'istirahat', 'ritme sirkadian'],
+        reply: "Kualitas tidur adalah kunci pemulihan energi! 🌙💤<br><br>Berikut 3 tips mengatasi susah tidur karena gadget:<br>1. Hentikan scrolling gadget minimal 60 menit sebelum tidur.<br>2. Redupkan lampu kamar dan aktifkan mode night shift / blue light filter.<br>3. Hindari makan berat atau kafein setelah pukul 20:00 WIB.<br><br><a href='tips.html' class='chat-link-btn'>Lihat Panduan Digital Detox →</a>"
+      },
+      {
+        patterns: ['dampak', 'bahaya', 'sedentary', 'penyakit', 'risiko', 'jantung', 'diabetes', 'obesitas', 'fomo'],
+        reply: "Gaya hidup *sedentary* (terlalu banyak rebahan & duduk diam) membawa risiko nyata bagi tubuh:<br><br>⚠️ **Penurunan Metabolisme:** Membakar kalori jauh lebih lambat.<br>⚠️ **Text Neck & Skoliosis:** Kelainan postur akibat posisi duduk/tiduran yang salah saat pegang HP.<br>⚠️ **Risiko Kardiometabolik:** Peningkatan risiko obesitas dan diabetes tipe 2.<br><br>Yuk luangkan 5 menit untuk berdiri dan jalan ringan sekarang!"
+      },
+      {
+        patterns: ['biaya', 'harga', 'bayar', 'tarif', 'gratis', 'langganan', 'pricing', 'paket', 'premium'],
+        reply: "Seluruh fitur di situs Generasi Rebahan (Kuis Adaptif, Habit Tracker, Panduan Tips Digital Detox, hingga Chatbot RebaBot ini) **100% GRATIS** dan bebas biaya! 🎉<br><br>Proyek ini dibuat sepenuh hati sebagai purwarupa edukasi kesehatan masyarakat."
+      },
+      {
+        patterns: ['kontak', 'hubungi', 'support', 'tim', 'developer', 'creator', 'pembuat', 'pesan', 'email', 'alamat', 'bantuan'],
+        reply: "Kamu bisa terhubung dengan tim pengembang Generasi Rebahan melalui:<br><br>📧 **Email:** halo@generasirebahan.id<br>🏆 **Ajang:** INVENTION 2026 Web Design Competition<br>📍 Kamu juga bisa mengirim pesan melalui formulir kontak yang ada di halaman Beranda.<br><br><a href='index.html#kontak' class='chat-link-btn'>Buka Formulir Kontak →</a>"
+      },
+      {
+        patterns: ['maskot', 'kukang', 'sloth', 'siapa kamu', 'nama kamu', 'reba', 'karakter'],
+        reply: "Namaku **Reba** si kukang digital! 🦥💚<br><br>Aku dulu juga suka rebahan seharian sambil scrolling tanpa henti. Tapi sekarang aku sudah belajar membagi waktu antara santai dan menjaga kesehatan fisik & mental. Senang bisa menemanimu di sini!"
+      },
+      {
+        patterns: ['halo', 'hai', 'hi', 'hello', 'hei', 'pagi', 'siang', 'sore', 'malam', 'assalam', 'hey', 'tes', 'oy', 'permisi'],
+        reply: "Halo! Senang bertemu denganmu di **Generasi Rebahan**! 🌿✨<br><br>Saya **RebaBot**, asisten AI yang siap membantumu mencari keseimbangan antara produktivitas digital dan kesehatan tubuh. Apa yang sedang kamu rasakan hari ini? Leher kaku, screen time berlebih, atau mau cek level magermu?"
+      }
+    ];
+
+    function getBotReply(userText) {
+      const clean = ' ' + userText.toLowerCase().replace(/[^\w\s]/gi, ' ') + ' ';
+      for (const item of knowledgeBase) {
+        for (const pattern of item.patterns) {
+          if (pattern.includes(' ')) {
+            if (clean.includes(pattern)) return item.reply;
+          } else {
+            const regex = new RegExp('(^|\\s)' + pattern + '(\\s|$)', 'i');
+            if (regex.test(clean)) return item.reply;
+          }
+        }
+      }
+      return "Pertanyaan yang bagus! 🤔 Saat ini RebaBot paling handal menjawab topik seputar:<br><br>• 💡 **Informasi Kampanye Generasi Rebahan & INVENTION 2026**<br>• 🎯 **Panduan Kuis Tingkat Rebahan (Santai s/d Maksimal)**<br>• 🧘 **Tips Ergonomi, Aturan Mata 20-20-20 & Insomnia**<br>• ⏰ **Aturan Habit Tracker & Reset Pukul 22:00 WIB**<br>• 📬 **Kontak Tim Pengembang**<br><br>Silakan tanyakan topik di atas atau klik salah satu tombol saran cepat di bawah header chat!";
+    }
+
+    function formatTime(date) {
+      const h = String(date.getHours()).padStart(2, '0');
+      const m = String(date.getMinutes()).padStart(2, '0');
+      return `${h}:${m}`;
+    }
+
+    function scrollChatToBottom() {
+      chatMessagesContainer.scrollTo({
+        top: chatMessagesContainer.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+
+    function renderMessage(role, htmlText, timeStr = null) {
+      const time = timeStr || formatTime(new Date());
+      const row = document.createElement('div');
+      row.className = `chat-msg-row ${role}`;
+
+      if (role === 'user') {
+        row.innerHTML = `
+          <div class="chat-bubble">${htmlText}</div>
+          <span class="chat-timestamp">${time}</span>
+        `;
+      } else {
+        row.innerHTML = `
+          <div class="chat-msg-bot-layout">
+            <div class="chat-avatar-mini">
+              <img src="mascot/aset4.png" alt="RebaBot" />
+            </div>
+            <div class="chat-bubble">${htmlText}</div>
+          </div>
+          <span class="chat-timestamp">${time}</span>
+        `;
+      }
+
+      chatMessagesContainer.appendChild(row);
+      scrollChatToBottom();
+      saveChatHistory();
+    }
+
+    function saveChatHistory() {
+      try {
+        const messages = [];
+        const rows = chatMessagesContainer.querySelectorAll('.chat-msg-row');
+        rows.forEach(r => {
+          const role = r.classList.contains('user') ? 'user' : 'bot';
+          const bubble = r.querySelector('.chat-bubble');
+          const time = r.querySelector('.chat-timestamp')?.textContent || '';
+          if (bubble) {
+            messages.push({ role, text: bubble.innerHTML, time });
+          }
+        });
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+      } catch (e) {}
+    }
+
+    function loadChatHistory() {
+      try {
+        const saved = sessionStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const messages = JSON.parse(saved);
+          if (Array.isArray(messages) && messages.length > 0) {
+            chatMessagesContainer.innerHTML = '';
+            messages.forEach(m => renderMessage(m.role, m.text, m.time));
+            return true;
+          }
+        }
+      } catch (e) {}
+      return false;
+    }
+
+    function showWelcomeMessage() {
+      chatMessagesContainer.innerHTML = '';
+      renderMessage('bot', "Halo Sobat Rebahan! 👋 Saya **RebaBot**, asisten AI Generasi Rebahan.<br><br>Ada yang bisa saya bantu terkait gaya hidup sehat, kuis kebiasaan, atau tips digital detox hari ini?");
+    }
+
+    function handleUserSend(rawText) {
+      const text = rawText.trim();
+      if (!text || isTyping) return;
+
+      // Escape user text for safe injection
+      const escapedText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      renderMessage('user', escapedText);
+      chatInputField.value = '';
+
+      if (typeof playUiSound === 'function') {
+        playUiSound('pop');
+      }
+
+      // Show typing indicator
+      isTyping = true;
+      chatTypingRow.style.display = 'flex';
+      chatTypingRow.setAttribute('aria-hidden', 'false');
+      scrollChatToBottom();
+
+      // Realistic typing delay: 1100ms - 1400ms
+      const delay = Math.floor(Math.random() * 300) + 1100;
+      setTimeout(() => {
+        chatTypingRow.style.display = 'none';
+        chatTypingRow.setAttribute('aria-hidden', 'true');
+        isTyping = false;
+
+        const replyHtml = getBotReply(text);
+        renderMessage('bot', replyHtml);
+
+        if (typeof playUiSound === 'function') {
+          playUiSound('success');
+        }
+      }, delay);
+    }
+
+    // Toggle Modal
+    function openChatWidget() {
+      chatWidgetModal.classList.add('is-open');
+      chatWidgetModal.setAttribute('aria-hidden', 'false');
+      chatWidgetTrigger.classList.add('is-active');
+      chatWidgetTrigger.setAttribute('aria-expanded', 'true');
+      if (chatBadge) chatBadge.classList.add('hidden');
+      setTimeout(() => chatInputField.focus(), 300);
+      scrollChatToBottom();
+      if (typeof playUiSound === 'function') {
+        playUiSound('pop');
+      }
+    }
+
+    function closeChatWidget() {
+      chatWidgetModal.classList.remove('is-open');
+      chatWidgetModal.setAttribute('aria-hidden', 'true');
+      chatWidgetTrigger.classList.remove('is-active');
+      chatWidgetTrigger.setAttribute('aria-expanded', 'false');
+      if (typeof playUiSound === 'function') {
+        playUiSound('click');
+      }
+    }
+
+    chatWidgetTrigger.addEventListener('click', function () {
+      if (chatWidgetModal.classList.contains('is-open')) {
+        closeChatWidget();
+      } else {
+        openChatWidget();
+      }
+    });
+
+    if (chatCloseBtn) {
+      chatCloseBtn.addEventListener('click', closeChatWidget);
+    }
+
+    // Clear Chat
+    if (chatClearBtn) {
+      chatClearBtn.addEventListener('click', function () {
+        if (confirm('Bersihkan riwayat percakapan dengan RebaBot?')) {
+          sessionStorage.removeItem(STORAGE_KEY);
+          showWelcomeMessage();
+          if (typeof showToast === 'function') {
+            showToast('Percakapan telah dibersihkan', '🧹');
+          }
+        }
+      });
+    }
+
+    // Form Submit
+    if (chatInputForm) {
+      chatInputForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        handleUserSend(chatInputField.value);
+      });
+    }
+
+    // Quick Chips click
+    if (chatQuickChips) {
+      chatQuickChips.addEventListener('click', function (e) {
+        const btn = e.target.closest('.chat-chip');
+        if (!btn) return;
+        const q = btn.dataset.question;
+        if (q) {
+          handleUserSend(q);
+        }
+      });
+    }
+
+    // Keyboard support: Escape closes modal
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && chatWidgetModal.classList.contains('is-open')) {
+        closeChatWidget();
+      }
+    });
+
+    // Initialize Chat History or Welcome
+    if (!loadChatHistory()) {
+      showWelcomeMessage();
+    }
+  }
 });
