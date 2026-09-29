@@ -18,19 +18,21 @@
 
 <nav class="site-nav sticky top-0 z-50 border-b border-line bg-bg/90 backdrop-blur-[10px]">
   <div class="mx-auto flex max-w-page flex-wrap items-center gap-[18px] px-6 py-3.5 max-sm:gap-2.5">
-    <div class="whitespace-nowrap font-display text-[1.05rem] font-bold">
+    <div class="nav-brand whitespace-nowrap font-display text-[1.05rem] font-bold">
       <span class="no-underline">Generasi<span class="text-accent">Rebahan</span></span>
     </div>
     <div class="navlinks ml-auto flex flex-wrap gap-1 max-sm:order-3 max-sm:w-full max-sm:justify-start" id="navlinks">
       <a href="index.html#beranda" class="active rounded-full px-[11px] py-[7px] text-[0.85rem] text-dim no-underline transition hover:bg-surface-2 hover:text-ink">Beranda</a>
-      <a href="index.html#cermin" class="rounded-full px-[11px] py-[7px] text-[0.85rem] text-dim no-underline transition hover:bg-surface-2 hover:text-ink">Cermin</a>
-      <a href="index.html#fakta" class="rounded-full px-[11px] py-[7px] text-[0.85rem] text-dim no-underline transition hover:bg-surface-2 hover:text-ink">Fakta</a>
-      <a href="index.html#dampak" class="rounded-full px-[11px] py-[7px] text-[0.85rem] text-dim no-underline transition hover:bg-surface-2 hover:text-ink">Dampak</a>
-      <a href="kuis.html" class="rounded-full px-[11px] py-[7px] text-[0.85rem] text-dim no-underline transition hover:bg-surface-2 hover:text-ink">Kuis</a>
       <a href="tips.html" class="rounded-full px-[11px] py-[7px] text-[0.85rem] text-dim no-underline transition hover:bg-surface-2 hover:text-ink">Tips & Tracker</a>
+      <a href="kuis.html" class="rounded-full px-[11px] py-[7px] text-[0.85rem] text-dim no-underline transition hover:bg-surface-2 hover:text-ink">Refleksi</a>
+      <a href="bmi.html" class="rounded-full px-[11px] py-[7px] text-[0.85rem] text-dim no-underline transition hover:bg-surface-2 hover:text-ink">Kalkulator BMI</a>
     </div>
-    <div class="flex items-center gap-2">
-      <button class="cursor-pointer rounded-lg border border-line bg-surface px-2.5 py-[7px] font-body text-[0.8rem] text-ink hover:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" id="modeToggle">🌙 Mode Rebahan</button>
+    <div class="nav-actions flex items-center gap-2">
+      <button class="account-button cursor-pointer rounded-lg border border-line bg-surface px-2.5 py-[7px] font-body text-[0.8rem] text-ink hover:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" id="accountButton" type="button">Masuk</button>
+      <button class="cursor-pointer rounded-lg border border-line bg-surface px-2.5 py-[7px] font-body text-[0.8rem] text-ink hover:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" id="modeToggle"><img class="ui-icon" src="icon/moon-night-svgrepo-com.svg" alt="" aria-hidden="true"><span>Mode Rebahan</span></button>
+      <button class="nav-menu-toggle" id="navMenuToggle" type="button" aria-label="Buka menu" aria-expanded="false" aria-controls="navlinks">
+        <span></span><span></span><span></span>
+      </button>
     </div>
   </div>
 </nav>
@@ -48,6 +50,7 @@
         </div>
         <div class="mt-8 flex flex-wrap gap-3">
           <a class="inline-block cursor-pointer rounded-full border border-transparent bg-accent px-[22px] py-3 text-[0.9rem] font-semibold text-[#14171c] no-underline hover:brightness-110" href="kuis.html">Cek Level Rebahanmu →</a>
+          <a class="inline-block cursor-pointer rounded-full border border-line px-[22px] py-3 text-[0.9rem] font-semibold text-ink no-underline hover:border-accent" href="bmi.html">Kalkulator BMI ⚡</a>
           <a class="inline-block cursor-pointer rounded-full border border-line px-[22px] py-3 text-[0.9rem] font-semibold text-ink no-underline hover:border-accent" href="#fakta">Lihat Data Lengkap</a>
         </div>
       </div>
@@ -82,7 +85,7 @@
     <div class="mt-7 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4" id="mirrorGrid">
       <div class="mirror-card tilt-card relative min-h-[140px] cursor-pointer rounded-[14px] border border-line bg-surface p-5 transition hover:border-accent-2">
         <div class="spotlight-glow"></div>
-        <h3 class="mb-1.5 font-display text-base">🌅 Bangun tidur</h3>
+        <h3 class="mb-1.5 flex items-center gap-2 font-display text-base"><img class="ui-icon" src="icon/get-up-svgrepo-com.svg" alt="" aria-hidden="true">Bangun tidur</h3>
         <span class="text-xs text-accent-2">klik untuk refleksi</span>
         <div class="reveal mt-2.5 border-t border-dashed border-line text-[0.88rem] text-dim">
           <div class="pt-2.5">Alarm bunyi, tangan otomatis cari HP dulu sebelum kaki menyentuh lantai. 30 menit pertama hari ini habis untuk scroll, bukan untuk diri sendiri.</div>
@@ -90,7 +93,7 @@
       </div>
       <div class="mirror-card tilt-card relative min-h-[140px] cursor-pointer rounded-[14px] border border-line bg-surface p-5 transition hover:border-accent-2">
         <div class="spotlight-glow"></div>
-        <h3 class="mb-1.5 font-display text-base">🍔 Jam makan siang</h3>
+        <h3 class="mb-1.5 flex items-center gap-2 font-display text-base"><img class="ui-icon" src="icon/junk-food-burger-svgrepo-com%20(1).svg" alt="" aria-hidden="true">Jam makan siang</h3>
         <span class="text-xs text-accent-2">klik untuk refleksi</span>
         <div class="reveal mt-2.5 border-t border-dashed border-line text-[0.88rem] text-dim">
           <div class="pt-2.5">Makan sambil nonton video pendek — porsi jadi tidak terasa, dan yang dipesan biasanya yang paling cepat sampai, bukan yang paling sehat.</div>
@@ -98,7 +101,7 @@
       </div>
       <div class="mirror-card tilt-card relative min-h-[140px] cursor-pointer rounded-[14px] border border-line bg-surface p-5 transition hover:border-accent-2">
         <div class="spotlight-glow"></div>
-        <h3 class="mb-1.5 font-display text-base">🛋️ Sore hari</h3>
+        <h3 class="mb-1.5 flex items-center gap-2 font-display text-base"><img class="ui-icon" src="icon/sunset-svgrepo-com.svg" alt="" aria-hidden="true">Sore hari</h3>
         <span class="text-xs text-accent-2">klik untuk refleksi</span>
         <div class="reveal mt-2.5 border-t border-dashed border-line text-[0.88rem] text-dim">
           <div class="pt-2.5">"Rebahan sebentar" setelah pulang, ternyata tahu-tahu sudah dua jam berlalu di media sosial.</div>
@@ -106,7 +109,7 @@
       </div>
       <div class="mirror-card tilt-card relative min-h-[140px] cursor-pointer rounded-[14px] border border-line bg-surface p-5 transition hover:border-accent-2">
         <div class="spotlight-glow"></div>
-        <h3 class="mb-1.5 font-display text-base">🌙 Menjelang tidur</h3>
+        <h3 class="mb-1.5 flex items-center gap-2 font-display text-base"><img class="ui-icon" src="icon/moon-night-svgrepo-com.svg" alt="" aria-hidden="true">Menjelang tidur</h3>
         <span class="text-xs text-accent-2">klik untuk refleksi</span>
         <div class="reveal mt-2.5 border-t border-dashed border-line text-[0.88rem] text-dim">
           <div class="pt-2.5">Niatnya tidur jam 10, tapi "satu video lagi" berulang sampai lewat tengah malam — besok bangun tetap harus jam yang sama.</div>
@@ -184,14 +187,14 @@
     <div class="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-5">
       <div class="tilt-card hover-lift rounded-[14px] border border-line bg-surface p-7">
         <div class="spotlight-glow"></div>
-        <div class="mb-2 text-3xl">🎯</div>
+        <div class="mb-2"><img class="ui-icon ui-icon--feature" src="icon/target-hit-aim-svgrepo-com.svg" alt="" aria-hidden="true"></div>
         <h3 class="mb-2 font-display text-xl">Ingin Tahu Level Kebiasaanmu?</h3>
         <p class="mb-5 max-w-[65ch] text-dim">Ikuti Cek Kebiasaan 2 Menit (12 Soal Adaptif) untuk mengetahui skor profil digitalmu dari 5 dimensi.</p>
         <a href="kuis.html" class="inline-block cursor-pointer rounded-full border border-transparent bg-accent px-[22px] py-3 text-[0.9rem] font-semibold text-[#14171c] no-underline hover:brightness-110">Mulai Kuis Adaptif →</a>
       </div>
       <div class="tilt-card hover-lift rounded-[14px] border border-line bg-surface p-7">
         <div class="spotlight-glow"></div>
-        <div class="mb-2 text-3xl">🌱</div>
+        <div class="mb-2"><img class="ui-icon ui-icon--feature" src="icon/tactics-planning-svgrepo-com.svg" alt="" aria-hidden="true"></div>
         <h3 class="mb-2 font-display text-xl">Tips & Habit Tracker Harian</h3>
         <p class="mb-5 max-w-[65ch] text-dim">Akses rekomendasi aksi nyata, fakta acak, serta tracker target harian dengan fitur reset otomatis Jam 22:00.</p>
         <a href="tips.html" class="inline-block cursor-pointer rounded-full border border-line px-[22px] py-3 text-[0.9rem] font-semibold text-ink no-underline hover:border-accent">Buka Tips & Tracker →</a>
@@ -207,6 +210,51 @@
 <canvas id="confettiCanvas"></canvas>
 <div class="toast-container" id="toastContainer"></div>
 <button class="back-to-top" id="backToTop" title="Kembali ke atas">↑</button>
+
+<div class="account-modal-overlay" id="accountModalOverlay" hidden>
+  <section class="account-modal" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
+    <button class="account-modal-close" id="accountModalClose" type="button" aria-label="Tutup login">×</button>
+    <h2 id="accountModalTitle">Simpan progresmu</h2>
+    <p class="account-modal-note">Login dummy untuk menyimpan checklist rutinitas di akun perangkat ini. Tidak ada data yang dikirim ke server.</p>
+    <form id="accountForm">
+      <label for="accountName">Nama pengguna</label>
+      <input id="accountName" type="text" maxlength="40" required placeholder="Contoh: Raka">
+      <label for="accountEmail">Email dummy</label>
+      <input id="accountEmail" type="email" required placeholder="raka@email.test">
+      <button type="submit">Masuk & Simpan Progres</button>
+    </form>
+    <button class="account-logout" id="accountLogout" type="button" hidden>Keluar dari akun</button>
+  </section>
+</div>
+
+<div class="info-chatbot" id="infoChatbot">
+  <button class="chatbot-launcher" id="chatbotLauncher" type="button" aria-label="Buka Rebahan Bot" title="Buka Rebahan Bot" aria-expanded="false" aria-controls="chatbotPanel"><span class="chatbot-avatar"><img src="mascot/aset4.png" alt="" aria-hidden="true"></span></button>
+  <section class="chatbot-panel" id="chatbotPanel" aria-label="Chatbot informasi kesehatan digital" hidden>
+    <div class="chatbot-header">
+      <div class="chatbot-brand">
+        <span class="chatbot-avatar chatbot-avatar-large"><img src="mascot/aset4.png" alt="Maskot Rebahan Bot"></span>
+        <div>
+        <strong>Rebahan Bot</strong>
+        <span>Informasi berbasis sumber</span>
+        </div>
+      </div>
+      <button class="chatbot-close" id="chatbotClose" type="button" aria-label="Tutup chatbot">×</button>
+    </div>
+    <div class="chatbot-messages" id="chatbotMessages" aria-live="polite">
+      <div class="chatbot-message bot">Halo! Tanyakan tentang screen time, sedentari, cyberbullying, minuman manis, atau tips hidup lebih aktif.</div>
+    </div>
+    <div class="chatbot-quick-actions">
+      <button type="button" data-chat-question="Apa temuan jurnal tentang screen time?">Temuan jurnal</button>
+      <button type="button" data-chat-question="Apa dampak terlalu lama duduk?">Dampak sedentari</button>
+      <button type="button" data-chat-question="Berapa lama penggunaan ponsel di Indonesia?">Data ponsel</button>
+      <button type="button" data-chat-question="Apa sumber data kamu?">Sumber data</button>
+    </div>
+    <form class="chatbot-form" id="chatbotForm">
+      <input id="chatbotInput" type="text" maxlength="180" placeholder="Tulis pertanyaan..." autocomplete="off" aria-label="Pertanyaan untuk chatbot">
+      <button type="submit" aria-label="Kirim pertanyaan">Kirim</button>
+    </form>
+  </section>
+</div>
 
 <script src="js/script.js"></script>
 </body>
