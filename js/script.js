@@ -16,18 +16,36 @@ document.addEventListener('DOMContentLoaded', function () {
   const initialMode = savedMode === 'sehat' ? 'sehat' : 'rebahan';
   document.documentElement.setAttribute('data-mode', initialMode);
   document.body.setAttribute('data-mode', initialMode);
+  const iconAssets = {
+    getUp: 'icon/get-up-svgrepo-com.svg',
+    walking: 'icon/man-walking-svgrepo-com.svg',
+    burger: 'icon/junk-food-burger-svgrepo-com%20(1).svg',
+    moon: 'icon/moon-night-svgrepo-com.svg',
+    clock: 'icon/clock-svgrepo-com.svg',
+    sunset: 'icon/sunset-svgrepo-com.svg',
+    snack: 'icon/snack-fast-food-svgrepo-com.svg',
+    phone: 'icon/smartphone-tablet-svgrepo-com.svg',
+    planning: 'icon/tactics-planning-svgrepo-com.svg',
+    target: 'icon/target-hit-aim-svgrepo-com.svg'
+  };
+
+  function iconMarkup(name, className = 'ui-icon') {
+    const src = iconAssets[name];
+    return src ? `<img class="${className}" src="${src}" alt="" aria-hidden="true">` : '';
+  }
 
   /* =========================================================
      0. INTERACTIVE SYSTEM HELPERS (Toast, Sound, Confetti, Tilt, Scroll)
      ========================================================= */
 
   /* ----- 0.1 Toast Notification Engine ----- */
-  function showToast(message, icon = '✨', duration = 3000) {
+  function showToast(message, icon = null, duration = 3000) {
     const container = document.getElementById('toastContainer');
     if (!container) return;
     const toast = document.createElement('div');
     toast.className = 'toast-msg';
-    toast.innerHTML = `<span style="font-size:1.1rem;">${icon}</span> <span>${message}</span>`;
+    toast.innerHTML = `${icon ? iconMarkup(icon, 'ui-icon toast-icon') : ''}<span></span>`;
+    toast.lastElementChild.textContent = message;
     container.appendChild(toast);
     
     void toast.offsetWidth; // force reflow
@@ -120,10 +138,232 @@ document.addEventListener('DOMContentLoaded', function () {
   const siteNav = document.querySelector('.site-nav');
   if (siteNav) {
     const syncNavOffset = function () {
-      document.body.style.paddingTop = `${siteNav.offsetHeight}px`;
+      const navTop = parseFloat(getComputedStyle(siteNav).top) || 0;
+      document.body.style.paddingTop = `${siteNav.offsetHeight + navTop + 16}px`;
     };
     syncNavOffset();
     window.addEventListener('resize', syncNavOffset);
+
+    if (document.getElementById('beranda')) {
+      const updateNavOnScroll = function () {
+        siteNav.classList.toggle('is-scrolled', window.scrollY > 24);
+      };
+      updateNavOnScroll();
+      window.addEventListener('scroll', updateNavOnScroll, { passive: true });
+    }
+
+    const navMenuToggle = siteNav.querySelector('#navMenuToggle');
+    const closeNavMenu = function () {
+      siteNav.classList.remove('is-open');
+      navMenuToggle?.setAttribute('aria-expanded', 'false');
+      navMenuToggle?.setAttribute('aria-label', 'Buka menu');
+    };
+
+    if (navMenuToggle) {
+      navMenuToggle.addEventListener('click', function () {
+        const isOpen = siteNav.classList.toggle('is-open');
+        navMenuToggle.setAttribute('aria-expanded', String(isOpen));
+        navMenuToggle.setAttribute('aria-label', isOpen ? 'Tutup menu' : 'Buka menu');
+      });
+
+      siteNav.querySelectorAll('.navlinks a').forEach(function (link) {
+        link.addEventListener('click', closeNavMenu);
+      });
+
+      document.addEventListener('click', function (event) {
+        if (!siteNav.contains(event.target)) closeNavMenu();
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') closeNavMenu();
+      });
+
+      window.addEventListener('resize', function () {
+        if (window.innerWidth > 900) closeNavMenu();
+      });
+    }
+  }
+
+  /* ----- 0.3 Dummy Account — progress tracker per user/device ----- */
+  const accountButton = document.getElementById('accountButton');
+  const accountOverlay = document.getElementById('accountModalOverlay');
+  const accountClose = document.getElementById('accountModalClose');
+  const accountForm = document.getElementById('accountForm');
+  const accountLogout = document.getElementById('accountLogout');
+  const accountName = document.getElementById('accountName');
+  const accountEmail = document.getElementById('accountEmail');
+  let currentUser = null;
+
+  try {
+    currentUser = JSON.parse(localStorage.getItem('rebahan_current_user')) || null;
+  } catch (e) {
+    currentUser = null;
+  }
+
+  function accountStorageKey(prefix, user = currentUser) {
+    return user ? prefix + '_' + encodeURIComponent(user.id) : prefix;
+  }
+
+  function updateAccountUI() {
+    if (!accountButton) return;
+    accountButton.textContent = currentUser ? currentUser.name : 'Masuk';
+    accountButton.title = currentUser
+      ? 'Akun dummy aktif: ' + currentUser.email
+      : 'Login dummy untuk menyimpan progres';
+    if (accountLogout) accountLogout.hidden = !currentUser;
+    if (accountForm) accountForm.hidden = !!currentUser;
+    if (accountName && currentUser) accountName.value = currentUser.name;
+    if (accountEmail && currentUser) accountEmail.value = currentUser.email;
+  }
+
+  function openAccountModal() {
+    if (!accountOverlay) return;
+    accountOverlay.hidden = false;
+    updateAccountUI();
+    accountOverlay.classList.add('show');
+    if (currentUser && accountLogout) accountLogout.focus();
+    else if (accountName) accountName.focus();
+  }
+
+  function closeAccountModal() {
+    if (accountOverlay) {
+      accountOverlay.classList.remove('show');
+      setTimeout(function () { accountOverlay.hidden = true; }, 250);
+    }
+  }
+
+  if (accountButton) accountButton.addEventListener('click', openAccountModal);
+  if (accountClose) accountClose.addEventListener('click', closeAccountModal);
+  if (accountOverlay) {
+    accountOverlay.addEventListener('click', function (e) {
+      if (e.target === accountOverlay) closeAccountModal();
+    });
+  }
+  if (accountForm) {
+    accountForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const name = accountName.value.trim();
+      const email = accountEmail.value.trim().toLowerCase();
+      if (!name || !email) return;
+
+      const previousTracker = localStorage.getItem('rebahan_tracker_state');
+      const previousHabits = localStorage.getItem('rebahan_custom_habits');
+      currentUser = { id: email, name: name, email: email };
+      localStorage.setItem('rebahan_current_user', JSON.stringify(currentUser));
+      if (!localStorage.getItem(accountStorageKey('rebahan_tracker_state'))) {
+        if (previousTracker) localStorage.setItem(accountStorageKey('rebahan_tracker_state'), previousTracker);
+        if (previousHabits) localStorage.setItem(accountStorageKey('rebahan_custom_habits'), previousHabits);
+      }
+      updateAccountUI();
+      if (typeof loadTrackerForCurrentUser === 'function') loadTrackerForCurrentUser();
+      closeAccountModal();
+      showToast('Login dummy berhasil. Progresmu tersimpan di akun ini.');
+    });
+  }
+  if (accountLogout) {
+    accountLogout.addEventListener('click', function () {
+      currentUser = null;
+      localStorage.removeItem('rebahan_current_user');
+      updateAccountUI();
+      if (typeof loadTrackerForCurrentUser === 'function') loadTrackerForCurrentUser();
+      closeAccountModal();
+      showToast('Kamu keluar dari akun dummy.');
+    });
+  }
+  updateAccountUI();
+
+  /* ----- 0.4 Informasi Data Chatbot ----- */
+  const chatbotLauncher = document.getElementById('chatbotLauncher');
+  const chatbotPanel = document.getElementById('chatbotPanel');
+  const chatbotClose = document.getElementById('chatbotClose');
+  const chatbotForm = document.getElementById('chatbotForm');
+  const chatbotInput = document.getElementById('chatbotInput');
+  const chatbotMessages = document.getElementById('chatbotMessages');
+
+  /*
+   * Data references:
+   * Full source summaries: sources/ringkasan-referensi.md
+   * - Bagaskara, Yasmin, & Komalasari, Junior Medical Journal Vol. 3 No. 6 (2025).
+   * - Seketika.com, "Orang Indonesia Rata-rata Gunakan Ponsel 6 Jam Sehari..."
+   * - UNICEF, "More than a third of young people in 30 countries report being a victim of online bullying".
+   * - Artikel "Mayoritas Warga RI Masih Sering Konsumsi Minuman Manis".
+   */
+  const chatbotAnswers = [
+    {
+      keywords: ['jurnal', 'screen time', 'screentime', 'sedentari', 'sedenter'],
+      answer: 'Dalam studi Junior Medical Journal (2025) pada pegawai RS Insan Permata, 66,3% responden memiliki gaya hidup sedenter dan 88,1% memiliki screen time tinggi. Studi ini melibatkan 101 data responden yang dianalisis, jadi angkanya tidak otomatis mewakili seluruh penduduk Indonesia.'
+    },
+    {
+      keywords: ['duduk', 'sedentari', 'sedenter', 'bergerak', 'jantung'],
+      answer: 'Gaya hidup sedenter berarti banyak waktu duduk atau berbaring dengan sedikit aktivitas. Data yang kami miliki mencatat 24,1% penduduk Indonesia berperilaku sedenter selama 6 jam per hari berdasarkan rujukan Riskesdas/penelitian terkait. Coba selingi duduk dengan berdiri atau berjalan singkat.'
+    },
+    {
+      keywords: ['ponsel', 'hp', 'handphone', 'penggunaan ponsel', '6 jam'],
+      answer: 'Data yang kami miliki dari artikel Seketika.com menyoroti rata-rata penggunaan ponsel di Indonesia sekitar 6 jam per hari dan menyebutnya sebagai salah satu yang tertinggi di dunia. Angka ini perlu dibaca sebagai laporan media, bukan hasil pengukuran chatbot.'
+    },
+    {
+      keywords: ['cyberbullying', 'bullying', 'perundungan', 'online bullying'],
+      answer: 'Data yang kami miliki dari polling UNICEF menyebut lebih dari sepertiga anak muda di 30 negara pernah menjadi korban perundungan daring. Jika mengalami atau menyaksikan cyberbullying, simpan bukti, blokir/laporkan akun, dan ceritakan kepada orang dewasa tepercaya.'
+    },
+    {
+      keywords: ['minuman', 'manis', 'gula', 'boba', 'soda'],
+      answer: 'Sumber berita tentang mayoritas warga RI yang masih sering mengonsumsi minuman manis menunjukkan kebiasaan ini perlu diperhatikan. Chatbot tidak menetapkan angka persentase tanpa data tabel sumber; langkah sederhana yang bisa dicoba adalah mengurangi frekuensi dan memilih air putih lebih sering.'
+    },
+    {
+      keywords: ['hubungan', 'penyakit jantung', 'pjk', 'risiko'],
+      answer: 'Jurnal RS Insan Permata tidak menemukan hubungan signifikan antara durasi screen time maupun durasi tidur dengan risiko penyakit jantung koroner pada sampel tersebut (p masing-masing 0,604 dan 0,086). Faktor usia dan jenis kelamin justru menunjukkan hubungan signifikan. Ini bukan diagnosis pribadi.'
+    },
+    {
+      keywords: ['tips', 'sehat', 'solusi', 'apa yang harus', 'mengurangi'],
+      answer: 'Mulai dari langkah kecil: jeda berdiri atau berjalan tiap jam, jauhkan ponsel sebelum tidur, kurangi minuman berpemanis secara bertahap, dan gunakan tracker di halaman Tips & Tracker. Pilih target yang realistis dan konsisten.'
+    },
+    {
+      keywords: ['sumber', 'referensi', 'data kamu', 'asal data'],
+      answer: 'Sumber informasi: (1) Bagaskara, Yasmin, dan Komalasari, Junior Medical Journal Vol. 3 No. 6, Desember 2025, tentang sedentary life, screen time, dan risiko PJK pada pegawai RS Insan Permata; (2) artikel Seketika.com tentang rata-rata penggunaan ponsel Indonesia; (3) polling UNICEF tentang online bullying di 30 negara; (4) artikel tentang konsumsi minuman manis warga RI. Silakan cek dokumen asli untuk konteks lengkap.'
+    }
+  ];
+
+  function getChatbotAnswer(question) {
+    const normalized = question.toLowerCase().trim();
+    if (!normalized) return 'Tulis pertanyaan terlebih dahulu, misalnya: “Apa temuan jurnal tentang screen time?”';
+    const match = chatbotAnswers.find(item => item.keywords.some(keyword => normalized.includes(keyword)));
+    return match ? match.answer : 'Saya bisa membantu menjelaskan screen time, gaya hidup sedentari, risiko PJK, cyberbullying, minuman manis, tips sehat, dan sumber data. Coba gunakan salah satu topik tersebut.';
+  }
+
+  function addChatMessage(text, type) {
+    const message = document.createElement('div');
+    message.className = `chatbot-message ${type}`;
+    message.textContent = text;
+    chatbotMessages.appendChild(message);
+    chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+  }
+
+  function askChatbot(question) {
+    addChatMessage(question, 'user');
+    window.setTimeout(() => addChatMessage(getChatbotAnswer(question), 'bot'), 180);
+  }
+
+  if (chatbotLauncher && chatbotPanel && chatbotMessages) {
+    chatbotLauncher.addEventListener('click', function () {
+      const isOpen = !chatbotPanel.hidden;
+      chatbotPanel.hidden = isOpen;
+      this.setAttribute('aria-expanded', String(!isOpen));
+      if (!isOpen && chatbotInput) chatbotInput.focus();
+    });
+    chatbotClose.addEventListener('click', () => {
+      chatbotPanel.hidden = true;
+      chatbotLauncher.setAttribute('aria-expanded', 'false');
+    });
+    chatbotForm.addEventListener('submit', function (event) {
+      event.preventDefault();
+      const question = chatbotInput.value.trim();
+      if (!question) return;
+      askChatbot(question);
+      chatbotInput.value = '';
+    });
+    document.querySelectorAll('[data-chat-question]').forEach(button => {
+      button.addEventListener('click', () => askChatbot(button.dataset.chatQuestion));
+    });
   }
 
   /* ----- 0.3 Canvas Confetti Particle System ----- */
@@ -193,26 +433,22 @@ document.addEventListener('DOMContentLoaded', function () {
     const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     if (isTouch) return;
 
-    const tiltCards = document.querySelectorAll('.tilt-card:not(.no-tilt), .mirror-card:not(.no-tilt)');
+    const tiltCards = document.querySelectorAll('#beranda ~ section .tilt-card:not(.no-tilt)');
     tiltCards.forEach(card => {
       card.addEventListener('mousemove', function (e) {
         const rect = this.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        if (!rect.width || !rect.height) return;
 
-        this.style.setProperty('--mouse-x', `${x}px`);
-        this.style.setProperty('--mouse-y', `${y}px`);
+        const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        const y = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+        const rotateX = Math.max(-6, Math.min(6, y * 6));
+        const rotateY = Math.max(-6, Math.min(6, x * 6));
 
-        const centerX = rect.width / 2;
-        const centerY = rect.height / 2;
-        const rotateX = ((y - centerY) / centerY) * -5;
-        const rotateY = ((x - centerX) / centerX) * 5;
-
-        this.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
+        this.style.transform = `perspective(900px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(24px)`;
       });
 
       card.addEventListener('mouseleave', function () {
-        this.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0px)';
+        this.style.transform = '';
       });
     });
   }
@@ -230,9 +466,11 @@ document.addEventListener('DOMContentLoaded', function () {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           entry.target.classList.add('is-visible');
+        } else {
+          entry.target.classList.remove('is-visible');
         }
       });
-    }, { threshold: 0.1 });
+    }, { threshold: 0.14 });
 
     reveals.forEach(r => observer.observe(r));
   }
@@ -261,7 +499,9 @@ document.addEventListener('DOMContentLoaded', function () {
   /* ----- 1.1 Mode Toggle (Rebahan ↔ Sehat / Dark ↔ Light) ----- */
   const modeToggle = document.getElementById('modeToggle');
   if (modeToggle) {
-    modeToggle.innerHTML = initialMode === 'sehat' ? '☀️ Mode Sehat' : '🌙 Mode Rebahan';
+    modeToggle.innerHTML = initialMode === 'sehat'
+      ? `${iconMarkup('getUp')}<span>Mode Sehat</span>`
+      : `${iconMarkup('moon')}<span>Mode Rebahan</span>`;
     modeToggle.addEventListener('click', function () {
       const isSehat = document.body.getAttribute('data-mode') === 'sehat';
       const nextMode = isSehat ? 'rebahan' : 'sehat';
@@ -269,11 +509,11 @@ document.addEventListener('DOMContentLoaded', function () {
       document.body.setAttribute('data-mode', nextMode);
       localStorage.setItem('rebahan_mode', nextMode);
       if (isSehat) {
-        this.innerHTML = '🌙 Mode Rebahan';
-        showToast('Mode Rebahan Aktif 🌙', '🌙');
+        this.innerHTML = `${iconMarkup('moon')}<span>Mode Rebahan</span>`;
+        showToast('Mode Rebahan Aktif', 'moon');
       } else {
-        this.innerHTML = '☀️ Mode Sehat';
-        showToast('Mode Sehat Aktif ☀️', '☀️');
+        this.innerHTML = `${iconMarkup('getUp')}<span>Mode Sehat</span>`;
+        showToast('Mode Sehat Aktif', 'getUp');
       }
     });
   }
@@ -327,7 +567,9 @@ document.addEventListener('DOMContentLoaded', function () {
       const bottom = top + section.offsetHeight;
       if (scrollPos >= top && scrollPos < bottom) {
         navLinks.forEach(a => a.classList.remove('active'));
-        const activeLink = document.querySelector('.navlinks a[href="#' + section.id + '"]');
+        const homeSectionIds = ['beranda', 'cermin', 'fakta', 'dampak', 'explorePages'];
+        const navTarget = homeSectionIds.includes(section.id) ? 'beranda' : section.id;
+        const activeLink = document.querySelector('.navlinks a[href$="#' + navTarget + '"]');
         if (activeLink) activeLink.classList.add('active');
       }
     });
@@ -341,41 +583,72 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   /* ----- 2.3 Fakta & Data — Counter animasi saat section terlihat ----- */
-  let counted = false;
-  function animateCounters() {
-    if (counted) return;
-    const fakta = document.getElementById('fakta');
-    if (!fakta) return;
-    const statTop = fakta.offsetTop;
-    if (window.scrollY + window.innerHeight > statTop + 80) {
-      counted = true;
-      document.querySelectorAll('.stat-num').forEach(el => {
-        const target = parseFloat(el.getAttribute('data-target'));
-        const suffix = el.getAttribute('data-suffix') || '';
-        const isDecimal = target % 1 !== 0;
-        
-        let startTimestamp = null;
-        const duration = 1400;
-        
-        const step = (timestamp) => {
-          if (!startTimestamp) startTimestamp = timestamp;
-          const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-          const currentVal = progress * target;
-          
-          el.textContent = (isDecimal ? currentVal.toFixed(1) : Math.floor(currentVal)) + suffix;
-          
-          if (progress < 1) {
-            window.requestAnimationFrame(step);
-          } else {
-            el.textContent = (isDecimal ? target.toFixed(1) : target) + suffix;
-          }
-        };
+  const fakta = document.getElementById('fakta');
+  const statNumbers = fakta ? Array.from(fakta.querySelectorAll('.stat-num')) : [];
+
+  function formatStatValue(value, isDecimal) {
+    return isDecimal ? value.toFixed(1) : String(Math.floor(value));
+  }
+
+  statNumbers.forEach(function (element) {
+    const target = parseFloat(element.getAttribute('data-target'));
+    const suffix = element.getAttribute('data-suffix') || '';
+    const isDecimal = target % 1 !== 0;
+    element.textContent = formatStatValue(0, isDecimal) + suffix;
+  });
+
+  function startStatCount(element) {
+    const target = parseFloat(element.getAttribute('data-target'));
+    const suffix = element.getAttribute('data-suffix') || '';
+    const isDecimal = target % 1 !== 0;
+    const duration = 2400;
+    let startTimestamp = null;
+
+    function step(timestamp) {
+      if (startTimestamp === null) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      const easedProgress = 1 - Math.pow(1 - progress, 3);
+      const currentValue = easedProgress * target;
+      element.textContent = formatStatValue(currentValue, isDecimal) + suffix;
+
+      if (progress < 1) {
         window.requestAnimationFrame(step);
+      } else {
+        element.textContent = formatStatValue(target, isDecimal) + suffix;
+      }
+    }
+
+    window.requestAnimationFrame(step);
+  }
+
+  if (fakta && statNumbers.length) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      statNumbers.forEach(function (element) {
+        const target = parseFloat(element.getAttribute('data-target'));
+        const suffix = element.getAttribute('data-suffix') || '';
+        element.textContent = formatStatValue(target, target % 1 !== 0) + suffix;
       });
+    } else if ('IntersectionObserver' in window) {
+      const counterObserver = new IntersectionObserver(function (entries, observer) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            statNumbers.forEach(startStatCount);
+            return;
+          }
+
+          statNumbers.forEach(function (element) {
+            const target = parseFloat(element.getAttribute('data-target'));
+            const isDecimal = target % 1 !== 0;
+            const suffix = element.getAttribute('data-suffix') || '';
+            element.textContent = formatStatValue(0, isDecimal) + suffix;
+          });
+        });
+      }, { threshold: 0.2 });
+      counterObserver.observe(fakta);
+    } else {
+      statNumbers.forEach(startStatCount);
     }
   }
-  window.addEventListener('scroll', animateCounters);
-  animateCounters();
 
   /* =========================================================
      3. QUIZ ENGINE — Cek Kebiasaan Adaptif
@@ -741,7 +1014,7 @@ document.addEventListener('DOMContentLoaded', function () {
       calculateAndRenderScore();
       fadeIn(document.getElementById('quizResultView'), 'flex', 360, () => {
         launchConfetti();
-        showToast('Kuis Selesai! Hasil kamu telah dihitung 🎉', '🎉');
+        showToast('Kuis Selesai! Hasil kamu telah dihitung.', 'target');
       });
     });
   }
@@ -755,11 +1028,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const minRawScore = answered * 1;
 
     const catScores = {
-      digital: { sum: 0, count: 0, icon: '📱', label: 'DIGITAL' },
-      gerak: { sum: 0, count: 0, icon: '🪑', label: 'GERAK' },
-      tidur: { sum: 0, count: 0, icon: '😴', label: 'TIDUR' },
-      makan: { sum: 0, count: 0, icon: '🍔', label: 'MAKAN' },
-      wellbeing: { sum: 0, count: 0, icon: '🧠', label: 'WELLBEING' }
+      digital: { sum: 0, count: 0, icon: 'phone', label: 'DIGITAL' },
+      gerak: { sum: 0, count: 0, icon: 'walking', label: 'GERAK' },
+      tidur: { sum: 0, count: 0, icon: 'moon', label: 'TIDUR' },
+      makan: { sum: 0, count: 0, icon: 'burger', label: 'MAKAN' },
+      wellbeing: { sum: 0, count: 0, icon: 'planning', label: 'WELLBEING' }
     };
 
     userAnswers.forEach(function (ans) {
@@ -796,10 +1069,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /* --- Tentukan level badge (4 tier) --- */
     const levelConfig = {
-      balanced: { key: 'balanced', icon: '🟢', text: 'BALANCED', badgeClass: 'badge-balanced', desc: 'Kebiasaanmu relatif seimbang.' },
-      reset: { key: 'reset', icon: '🟡', text: 'NEED A RESET', badgeClass: 'badge-reset', desc: 'Bukan berarti kamu tidak sehat. Tapi beberapa kebiasaanmu mulai perlu diperhatikan.' },
-      move: { key: 'move', icon: '🟠', text: 'TIME TO MOVE', badgeClass: 'badge-move', desc: 'Beberapa pola hidup digitalmu sudah cukup dominan.' },
-      break: { key: 'break', icon: '🔴', text: 'BREAK THE LOOP', badgeClass: 'badge-break', desc: 'Banyak kebiasaanmu saling berkaitan dan sudah waktunya melakukan perubahan.' }
+      balanced: { key: 'balanced', text: 'BALANCED', badgeClass: 'badge-balanced', desc: 'Kebiasaanmu relatif seimbang.' },
+      reset: { key: 'reset', text: 'NEED A RESET', badgeClass: 'badge-reset', desc: 'Bukan berarti kamu tidak sehat. Tapi beberapa kebiasaanmu mulai perlu diperhatikan.' },
+      move: { key: 'move', text: 'TIME TO MOVE', badgeClass: 'badge-move', desc: 'Beberapa pola hidup digitalmu sudah cukup dominan.' },
+      break: { key: 'break', text: 'BREAK THE LOOP', badgeClass: 'badge-break', desc: 'Banyak kebiasaanmu saling berkaitan dan sudah waktunya melakukan perubahan.' }
     };
 
     let currentLevel;
@@ -808,7 +1081,7 @@ document.addEventListener('DOMContentLoaded', function () {
     else if (score120 <= 94) currentLevel = levelConfig.move;
     else currentLevel = levelConfig.break;
 
-    document.getElementById('resultStatusIcon').textContent = currentLevel.icon;
+    document.getElementById('resultStatusIcon').className = 'result-status-indicator ' + currentLevel.badgeClass;
     document.getElementById('resultStatusText').textContent = currentLevel.text;
     document.getElementById('resultStatusDesc').textContent = '“' + currentLevel.desc + '”';
     document.getElementById('resultStatusBadge').className = 'result-status-badge ' + currentLevel.badgeClass + ' inline-flex items-center gap-2 rounded-full border border-transparent px-[18px] py-2 font-display text-[1.05rem] font-bold tracking-wide';
@@ -838,7 +1111,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const dimItemHtml =
         '<div class="flex flex-col gap-1.5">' +
           '<div class="flex items-center justify-between text-[0.88rem] font-semibold">' +
-            '<span>' + c.icon + ' ' + c.label + '</span>' +
+            '<span class="inline-flex items-center gap-1.5">' + iconMarkup(c.icon) + c.label + '</span>' +
             '<span class="text-[0.82rem] text-dim">' + catPercent + '%</span>' +
           '</div>' +
           '<div class="h-2.5 overflow-hidden rounded-full border border-line bg-surface-2">' +
@@ -870,17 +1143,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /* --- Rekomendasi Aksi (pilih 3 dari recoKey jawaban user + fallback) --- */
     const recoMap = {
-      morning_detox: { icon: '🌅', title: 'Beri jeda 15 menit saat bangun', desc: 'Hirup udara atau bergerak dulu sebelum menyentuh HP.' },
-      stand_up_breaks: { icon: '🚶', title: 'Bangun dan bergerak secara berkala', desc: 'Berdiri atau jalan 2 menit di tengah sesi duduk lama.' },
-      regular_movement: { icon: '🏃', title: 'Jadwalkan gerak ringan 15 menit', desc: 'Pilih aktivitas fisik sederhana beberapa kali seminggu.' },
-      sleep_schedule: { icon: '⏰', title: 'Jaga jam tidur yang lebih stabil', desc: 'Usahakan tidur dan bangun di jam yang relatif konstan.' },
-      night_screen_detox: { icon: '📵', title: 'Beri jeda dari layar sebelum tidur', desc: 'Jauhkan HP dari kasur agar otak lebih mudah rileks.' },
-      healthy_snack: { icon: '🥗', title: 'Ganti junk food dengan camilan sederhana', desc: 'Sediakan buah atau kacang sebagai pilihan saat lapar.' },
-      reduce_sweet_drinks: { icon: '🥤', title: 'Kurangi frekuensi minuman berpemanis', desc: 'Ganti soda, boba, atau kopi manis dengan air putih.' },
-      mindful_eating: { icon: '🥣', title: 'Makan tanpa menatap layar', desc: 'Fokus pada makanannya agar porsi dan rasa lebih terasa.' },
-      body_recovery: { icon: '👁️', title: 'Istirahatkan mata tiap 20 menit', desc: 'Tatap objek jauh selama 20 detik untuk meredakan kelelahan.' },
-      app_timers: { icon: '📱', title: 'Pasang batas waktu aplikasi', desc: 'Gunakan timer agar scrolling tidak berjalan tanpa sadar.' },
-      focus_priority: { icon: '🎯', title: 'Selesaikan 1 hal penting dulu', desc: 'Tentukan satu prioritas sebelum membuka hiburan di HP.' }
+      morning_detox: { icon: 'getUp', title: 'Beri jeda 15 menit saat bangun', desc: 'Hirup udara atau bergerak dulu sebelum menyentuh HP.' },
+      stand_up_breaks: { icon: 'walking', title: 'Bangun dan bergerak secara berkala', desc: 'Berdiri atau jalan 2 menit di tengah sesi duduk lama.' },
+      regular_movement: { icon: 'walking', title: 'Jadwalkan gerak ringan 15 menit', desc: 'Pilih aktivitas fisik sederhana beberapa kali seminggu.' },
+      sleep_schedule: { icon: 'moon', title: 'Jaga jam tidur yang lebih stabil', desc: 'Usahakan tidur dan bangun di jam yang relatif konstan.' },
+      night_screen_detox: { icon: 'phone', title: 'Beri jeda dari layar sebelum tidur', desc: 'Jauhkan HP dari kasur agar otak lebih mudah rileks.' },
+      healthy_snack: { icon: 'snack', title: 'Ganti junk food dengan camilan sederhana', desc: 'Sediakan buah atau kacang sebagai pilihan saat lapar.' },
+      reduce_sweet_drinks: { icon: 'snack', title: 'Kurangi frekuensi minuman berpemanis', desc: 'Ganti soda, boba, atau kopi manis dengan air putih.' },
+      mindful_eating: { icon: 'burger', title: 'Makan tanpa menatap layar', desc: 'Fokus pada makanannya agar porsi dan rasa lebih terasa.' },
+      body_recovery: { icon: 'phone', title: 'Istirahatkan mata tiap 20 menit', desc: 'Tatap objek jauh selama 20 detik untuk meredakan kelelahan.' },
+      app_timers: { icon: 'clock', title: 'Pasang batas waktu aplikasi', desc: 'Gunakan timer agar scrolling tidak berjalan tanpa sadar.' },
+      focus_priority: { icon: 'target', title: 'Selesaikan 1 hal penting dulu', desc: 'Tentukan satu prioritas sebelum membuka hiburan di HP.' }
     };
 
     const selectedRecos = [];
@@ -909,7 +1182,7 @@ document.addEventListener('DOMContentLoaded', function () {
       actionGrid.insertAdjacentHTML('beforeend',
         '<div class="relative flex items-start gap-3 rounded-xl border border-line bg-surface-2 p-4">' +
           '<div class="absolute right-3 top-2.5 font-display text-[0.8rem] font-bold text-dim/50">' + (i + 1) + '</div>' +
-          '<div class="mt-0.5 text-2xl leading-none">' + r.icon + '</div>' +
+          '<div class="mt-0.5 leading-none">' + iconMarkup(r.icon, 'ui-icon ui-icon--feature') + '</div>' +
           '<div><h5 class="mb-1 text-[0.92rem] font-semibold text-ink">' + r.title + '</h5><p class="m-0 text-[0.82rem] leading-snug text-dim">' + r.desc + '</p></div>' +
         '</div>'
       );
@@ -1008,23 +1281,30 @@ document.addEventListener('DOMContentLoaded', function () {
     { id: 'def_6', title: 'Stretching & perbaiki postur tubuh', category: 'Fisik', isDefault: true }
   ];
 
-  let customHabits = [];
-  try {
-    customHabits = JSON.parse(localStorage.getItem('rebahan_custom_habits')) || [];
-  } catch (e) { customHabits = []; }
-
   /* State tracker: periode reset terakhir, map centang, jumlah streak */
   let trackerState = {
     lastResetPeriod: '',
     checkedMap: {},
-    streak: 0
+    streak: 0,
+    history: []
   };
-  try {
-    const loadedState = JSON.parse(localStorage.getItem('rebahan_tracker_state'));
-    if (loadedState && typeof loadedState === 'object') {
-      trackerState = Object.assign(trackerState, loadedState);
+  let customHabits = [];
+
+  function loadTrackerForCurrentUser() {
+    customHabits = [];
+    trackerState = { lastResetPeriod: '', checkedMap: {}, streak: 0 };
+    try {
+      const savedHabits = JSON.parse(localStorage.getItem(accountStorageKey('rebahan_custom_habits'))) || [];
+      if (Array.isArray(savedHabits)) customHabits = savedHabits;
+      const loadedState = JSON.parse(localStorage.getItem(accountStorageKey('rebahan_tracker_state')));
+      if (loadedState && typeof loadedState === 'object') {
+        trackerState = Object.assign(trackerState, loadedState);
+      }
+    } catch (e) {
+      customHabits = [];
     }
-  } catch (e) { }
+    if (typeof renderAll === 'function') renderAll();
+  }
 
   /* ----- 7.2 Reset Harian (Jam 22:00) — Hitung tanggal target reset ----- */
   function getTargetResetDate(now) {
@@ -1057,6 +1337,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (prevCheckedCount >= 4) {
           trackerState.streak = (trackerState.streak || 0) + 1;
+          const completedPeriod = trackerState.lastResetPeriod.slice(0, 10);
+          if (!Array.isArray(trackerState.history)) trackerState.history = [];
+          if (!trackerState.history.includes(completedPeriod)) {
+            trackerState.history.push(completedPeriod);
+          }
         } else {
           trackerState.streak = 0;
         }
@@ -1069,25 +1354,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function saveTrackerState() {
     try {
-      localStorage.setItem('rebahan_tracker_state', JSON.stringify(trackerState));
+      localStorage.setItem(accountStorageKey('rebahan_tracker_state'), JSON.stringify(trackerState));
     } catch (e) { }
   }
 
   function saveCustomHabits() {
     try {
-      localStorage.setItem('rebahan_custom_habits', JSON.stringify(customHabits));
+      localStorage.setItem(accountStorageKey('rebahan_custom_habits'), JSON.stringify(customHabits));
     } catch (e) { }
   }
 
   /* ----- 7.4 Countdown Timer Reset Harian (update setiap 1 detik) ----- */
   function updateCountdownTimer() {
     const now = new Date();
+    const previousPeriod = trackerState.lastResetPeriod;
+    checkAndApplyReset();
+    if (trackerState.lastResetPeriod !== previousPeriod) {
+      renderAll();
+    }
     const targetReset = getTargetResetDate(now);
     const diffMs = targetReset.getTime() - now.getTime();
 
     if (diffMs <= 0) {
-      checkAndApplyReset();
-      renderAll();
       return;
     }
 
@@ -1104,11 +1392,99 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   setInterval(updateCountdownTimer, 1000);
-  updateCountdownTimer();
 
   /* ----- 7.5 Getter Semua Kebiasaan (default + custom) ----- */
   function getAllHabits() {
-    return DEFAULT_HABITS.concat(customHabits);
+    return DEFAULT_HABITS.concat(Array.isArray(customHabits) ? customHabits : []);
+  }
+
+  let streakCalendarDate = new Date();
+  streakCalendarDate.setDate(1);
+
+  function renderStreakHistory() {
+    const calendar = document.getElementById('streakCalendar');
+    if (!calendar) return;
+
+    const loginMessage = document.getElementById('streakHistoryLogin');
+    const loggedIn = !!currentUser;
+    calendar.hidden = !loggedIn;
+    document.querySelector('.streak-calendar-toolbar').hidden = !loggedIn;
+    document.querySelector('.streak-calendar-legend').hidden = !loggedIn;
+    if (loginMessage) loginMessage.hidden = loggedIn;
+
+    const history = Array.isArray(trackerState.history) ? trackerState.history : [];
+    const completedDates = new Set(history);
+    const currentDone = Object.keys(trackerState.checkedMap || {}).filter(function (id) {
+      return trackerState.checkedMap[id] === true;
+    }).length >= 4;
+    if (currentDone && trackerState.lastResetPeriod) {
+      completedDates.add(trackerState.lastResetPeriod.slice(0, 10));
+    }
+
+    const total = document.getElementById('streakHistoryTotal');
+    if (total) total.textContent = completedDates.size + ' hari tercatat';
+
+    const monthHeading = document.getElementById('streakCalendarMonth');
+    if (!monthHeading) return;
+    monthHeading.textContent = new Intl.DateTimeFormat('id-ID', {
+      month: 'long',
+      year: 'numeric'
+    }).format(streakCalendarDate);
+
+    const weekdays = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+    calendar.innerHTML = weekdays.map(function (day) {
+      return '<div class="streak-calendar-day weekday" role="columnheader">' + day + '</div>';
+    }).join('');
+
+    const year = streakCalendarDate.getFullYear();
+    const month = streakCalendarDate.getMonth();
+    const firstWeekday = (new Date(year, month, 1).getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+    const todayKey = today.getFullYear() + '-' +
+      String(today.getMonth() + 1).padStart(2, '0') + '-' +
+      String(today.getDate()).padStart(2, '0');
+
+    for (let blank = 0; blank < firstWeekday; blank++) {
+      calendar.insertAdjacentHTML('beforeend', '<div class="streak-calendar-day empty" role="gridcell" aria-hidden="true"></div>');
+    }
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateKey = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+      const classes = ['streak-calendar-day'];
+      if (completedDates.has(dateKey)) classes.push('completed');
+      if (dateKey === todayKey) classes.push('today');
+      const label = completedDates.has(dateKey)
+        ? day + ', target harian tercapai'
+        : String(day);
+      calendar.insertAdjacentHTML(
+        'beforeend',
+        '<div class="' + classes.join(' ') + '" role="gridcell" aria-label="' + label + '">' + day + '</div>'
+      );
+    }
+
+    const prevButton = document.getElementById('streakMonthPrev');
+    const nextButton = document.getElementById('streakMonthNext');
+    if (prevButton) prevButton.disabled = !loggedIn;
+    if (nextButton) nextButton.disabled = !loggedIn;
+  }
+
+  const previousStreakMonth = document.getElementById('streakMonthPrev');
+  if (previousStreakMonth) {
+    previousStreakMonth.addEventListener('click', function () {
+      streakCalendarDate.setMonth(streakCalendarDate.getMonth() - 1);
+      renderStreakHistory();
+    });
+  }
+  const nextStreakMonth = document.getElementById('streakMonthNext');
+  if (nextStreakMonth) {
+    nextStreakMonth.addEventListener('click', function () {
+      streakCalendarDate = new Date(
+        streakCalendarDate.getFullYear(),
+        streakCalendarDate.getMonth() + 1,
+        1
+      );
+      renderStreakHistory();
+    });
   }
 
   /* ----- 7.6 Filter Tab Kategori ----- */
@@ -1165,7 +1541,7 @@ document.addEventListener('DOMContentLoaded', function () {
       void addHabitBtn.offsetWidth;
       addHabitBtn.classList.add('flash-success');
       const originalText = addHabitBtn.textContent;
-      addHabitBtn.textContent = '✅ Ditambahkan!';
+      addHabitBtn.textContent = 'Ditambahkan!';
       setTimeout(function () {
         addHabitBtn.textContent = originalText;
         addHabitBtn.classList.remove('flash-success');
@@ -1242,6 +1618,14 @@ document.addEventListener('DOMContentLoaded', function () {
     } else if (e.target.closest('.habit-checkbox')) {
       const cb = e.target.closest('.habit-checkbox');
       const habitId = cb.getAttribute('data-id');
+
+      if (!currentUser) {
+        e.preventDefault();
+        openAccountModal();
+        showToast('Silakan login terlebih dahulu untuk menyimpan progres.');
+        return;
+      }
+
       const isAlreadyChecked = !!trackerState.checkedMap[habitId];
 
       if (isAlreadyChecked) {
@@ -1283,8 +1667,8 @@ document.addEventListener('DOMContentLoaded', function () {
     filtered.forEach(h => {
       const isDone = !!trackerState.checkedMap[h.id];
       const catLabel = h.category;
-      const deleteBtnHtml = (!h.isDefault && !isDone) ? '<button class="btn-delete-habit" data-id="' + h.id + '" title="Hapus kebiasaan">🗑️</button>' : '';
-      const lockTagHtml = isDone ? '<span class="locked-tag">🔒 Terkunci</span>' : '';
+      const deleteBtnHtml = (!h.isDefault && !isDone) ? '<button class="btn-delete-habit" data-id="' + h.id + '" title="Hapus kebiasaan" aria-label="Hapus kebiasaan">Hapus</button>' : '';
+      const lockTagHtml = isDone ? '<span class="locked-tag">Terkunci</span>' : '';
 
       const itemHtml = `
         <div class="habit-item ${isDone ? 'done' : ''}" data-id="${h.id}">
@@ -1304,6 +1688,39 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   /* ----- 7.12 Update UI Statistik (progress %, streak card, status badge) ----- */
+  const streakCelebrationOverlay = document.getElementById('streakCelebrationOverlay');
+  const streakCelebrationClose = document.getElementById('streakCelebrationClose');
+  const streakCelebrationOk = document.getElementById('streakCelebrationOk');
+
+  function closeStreakCelebration() {
+    if (!streakCelebrationOverlay) return;
+    streakCelebrationOverlay.classList.remove('show');
+    setTimeout(function () {
+      streakCelebrationOverlay.hidden = true;
+    }, 220);
+  }
+
+  function showStreakCelebration() {
+    if (!streakCelebrationOverlay) return;
+    streakCelebrationOverlay.hidden = false;
+    requestAnimationFrame(function () {
+      streakCelebrationOverlay.classList.add('show');
+    });
+    if (streakCelebrationOk) streakCelebrationOk.focus();
+  }
+
+  if (streakCelebrationClose) {
+    streakCelebrationClose.addEventListener('click', closeStreakCelebration);
+  }
+  if (streakCelebrationOk) {
+    streakCelebrationOk.addEventListener('click', closeStreakCelebration);
+  }
+  if (streakCelebrationOverlay) {
+    streakCelebrationOverlay.addEventListener('click', function (event) {
+      if (event.target === streakCelebrationOverlay) closeStreakCelebration();
+    });
+  }
+
   function updateHabitUI() {
     const all = getAllHabits();
     const totalCount = all.length;
@@ -1353,11 +1770,11 @@ document.addEventListener('DOMContentLoaded', function () {
         saveTrackerState();
         setTimeout(function () {
           launchConfetti();
-          showToast('Selamat! Target 4+ Harian Tercapai! Streak Hari Ini Aktif 🔥', '🔥');
+          showStreakCelebration();
         }, 300);
       }
-      if(targetStatusBadge) { targetStatusBadge.textContent = '✅ Target Min. 4 Reached!'; targetStatusBadge.classList.add('active-streak'); }
-      if(streakBadge) { streakBadge.textContent = '🔥 Active Hari Ini'; streakBadge.classList.add('active-streak'); }
+      if(targetStatusBadge) { targetStatusBadge.textContent = 'Target Min. 4 tercapai'; targetStatusBadge.classList.add('active-streak'); }
+      if(streakBadge) { streakBadge.innerHTML = iconMarkup('target') + '<span>Aktif Hari Ini</span>'; streakBadge.classList.add('active-streak'); }
       if(streakCard) streakCard.classList.add('active-streak-card');
 
       const activeStreak = (trackerState.streak || 0) + 1;
@@ -1388,8 +1805,169 @@ document.addEventListener('DOMContentLoaded', function () {
     checkAndApplyReset();
     renderHabitList();
     updateHabitUI();
+    renderStreakHistory();
   }
 
+  loadTrackerForCurrentUser();
   renderAll();
+  updateCountdownTimer();
 
+});
+
+/* =========================================================
+   PAGE TRANSITION LOGIC
+   ========================================================= */
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('a').forEach(anchor => {
+    anchor.addEventListener('click', function(e) {
+      const href = this.getAttribute('href');
+      
+      // Ignore if no href, or if it's an external link
+      if (!href || href.startsWith('http') || href.startsWith('mailto:')) return;
+      
+      // Ignore if it's just an anchor hash
+      if (href.startsWith('#')) return;
+
+      // Extract the path without hash
+      const currentPath = window.location.pathname.split('/').pop() || 'index.html';
+      const targetPath = href.split('#')[0];
+
+      // If linking to the same page, do not animate (let default scroll handle it)
+      if (targetPath === currentPath) return;
+
+      // Only animate internal html page transitions
+      if (href.indexOf('.html') !== -1) {
+        e.preventDefault(); // Stop immediate navigation
+        document.body.classList.add('page-fade-out');
+        setTimeout(() => {
+          window.location.href = this.href;
+        }, 280); // Wait for animation to almost finish
+      }
+    });
+  });
+});
+
+/* =========================================================
+   PARALLAX STARS BACKGROUND (Continuous Drift Only)
+   ========================================================= */
+document.addEventListener('DOMContentLoaded', function() {
+  const body = document.body;
+  if (!body.classList.contains('bg-bg')) return;
+  
+  function animateBackground(time) {
+    // Continuous idle drift based on time
+    const drift0 = time * 0.005;
+    const drift1 = time * 0.003;
+    const drift2 = time * 0.007;
+    const drift3 = time * 0.004;
+
+    // Use only drift (X and Y directions for a natural float)
+    const x0 = drift0 * 0.5;  const y0 = drift0;
+    const x1 = drift1 * -0.5; const y1 = drift1;
+    const x2 = drift2 * 0.3;  const y2 = drift2;
+    const x3 = drift3 * -0.4; const y3 = drift3;
+    
+    body.style.backgroundPosition = `
+      ${x0}px ${y0}px, ${x1}px ${y1}px, ${x2}px ${y2}px, ${x3}px ${y3}px,
+      ${x0}px ${y0}px, ${x1}px ${y1}px, ${x2}px ${y2}px, ${x3}px ${y3}px
+    `;
+    
+    requestAnimationFrame(animateBackground);
+  }
+  
+  requestAnimationFrame(animateBackground);
+});
+
+/* =========================================================
+   CONSTELLATION EFFECT (Rasi Bintang)
+   ========================================================= */
+document.addEventListener('DOMContentLoaded', function() {
+  const body = document.body;
+  if (!body.classList.contains('bg-bg')) return;
+  
+  const canvas = document.createElement('canvas');
+  canvas.id = 'constellationCanvas';
+  canvas.style.position = 'fixed';
+  canvas.style.top = '0';
+  canvas.style.left = '0';
+  canvas.style.width = '100vw';
+  canvas.style.height = '100vh';
+  canvas.style.zIndex = '0'; // Behind content, above background color
+  canvas.style.pointerEvents = 'none'; // Don't block clicks
+  
+  // Insert as the first child of body
+  body.insertBefore(canvas, body.firstChild);
+  
+  const ctx = canvas.getContext('2d');
+  let width, height;
+  
+  function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  
+  const stars = [];
+  // Number of constellation stars (sparse, so it looks like constellations)
+  const numStars = Math.floor((width * height) / 25000); 
+  
+  for (let i = 0; i < numStars; i++) {
+    stars.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      radius: Math.random() * 1.5 + 0.5
+    });
+  }
+  
+  function draw() {
+    ctx.clearRect(0, 0, width, height);
+    
+    // Draw and update stars
+    ctx.fillStyle = 'rgba(224, 233, 255, 0.8)';
+    for (let i = 0; i < numStars; i++) {
+      const star = stars[i];
+      star.x += star.vx;
+      star.y += star.vy;
+      
+      // Wrap around edges
+      if (star.x < 0) star.x = width;
+      if (star.x > width) star.x = 0;
+      if (star.y < 0) star.y = height;
+      if (star.y > height) star.y = 0;
+      
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Draw constellation lines
+    ctx.lineWidth = 0.5;
+    const maxDist = 120;
+    
+    for (let i = 0; i < numStars; i++) {
+      for (let j = i + 1; j < numStars; j++) {
+        const dx = stars[i].x - stars[j].x;
+        const dy = stars[i].y - stars[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist < maxDist) {
+          const opacity = 1 - (dist / maxDist);
+          ctx.strokeStyle = `rgba(111, 228, 214, ${opacity * 0.5})`;
+          ctx.beginPath();
+          ctx.moveTo(stars[i].x, stars[i].y);
+          ctx.lineTo(stars[j].x, stars[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    
+    requestAnimationFrame(draw);
+  }
+  
+  requestAnimationFrame(draw);
 });
