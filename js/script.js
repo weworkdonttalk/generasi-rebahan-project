@@ -1,48 +1,42 @@
-
 /* =========================================================
    GENERASI REBAHAN — Main JavaScript
-   =========================================================
-   1. UI CONTROLS (mode tema, ukuran font, slider maskot)
-   2. NAV & SCROLL EFFECTS (active link, counter animasi, kartu cermin)
-   3. QUIZ ENGINE (bank soal, adaptif, render, hasil)
-   4. QUIZ BANNER (tampilkan hasil kuis di halaman Tips)
-   5. ACCORDION (Tips & Tracker expandable section)
-   6. RANDOM FACT (generator fakta acak)
-   7. HABIT TRACKER (streak, reset harian, CRUD habit, modal konfirmasi)
+   Refactored for Solus Aesthetic Benchmark & Maximum Reliability
+   1. System Helpers: Toast, Sound FX, Confetti, Theme Mode, Mobile Menu
+   2. Nav & Scroll: Active links, Counter animation, Mirror card reveal
+   3. Mascot Controller: Live status and emotion reactivity
+   4. Quiz Engine: Core & adaptive questions, score calculations, result rendering
+   5. Accordion & Facts: Expandable tips/FAQ, random facts generator
+   6. Habit Tracker: Local storage persistence, 22:00 auto-reset, locked modal
    ========================================================= */
 
 document.addEventListener('DOMContentLoaded', function () {
-  const savedMode = localStorage.getItem('rebahan_mode');
-  const initialMode = savedMode === 'sehat' ? 'sehat' : 'rebahan';
-  document.documentElement.setAttribute('data-mode', initialMode);
-  document.body.setAttribute('data-mode', initialMode);
+  'use strict';
 
   /* =========================================================
-     0. INTERACTIVE SYSTEM HELPERS (Toast, Sound, Confetti, Tilt, Scroll)
+     1. THEME MODE & AUDIO ENGINE
      ========================================================= */
+  const savedMode = localStorage.getItem('rebahan_mode');
+  const initialMode = savedMode === 'rebahan' ? 'rebahan' : 'sehat';
+  document.documentElement.dataset.mode = initialMode;
+  document.body.dataset.mode = initialMode;
 
-  /* ----- 0.1 Toast Notification Engine ----- */
-  function showToast(message, icon = '✨', duration = 3000) {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
-    const toast = document.createElement('div');
-    toast.className = 'toast-msg';
-    toast.innerHTML = `<span style="font-size:1.1rem;">${icon}</span> <span>${message}</span>`;
-    container.appendChild(toast);
-    
-    void toast.offsetWidth; // force reflow
-    toast.classList.add('show');
-
-    setTimeout(() => {
-      toast.classList.remove('show');
-      setTimeout(() => {
-        if (toast.parentNode) toast.parentNode.removeChild(toast);
-      }, 400);
-    }, duration);
+  const modeToggle = document.getElementById('modeToggle');
+  if (modeToggle) {
+    modeToggle.textContent = initialMode === 'rebahan' ? '🌙 Mode Rebahan' : '☀️ Mode Sehat';
+    modeToggle.addEventListener('click', function () {
+      const current = document.documentElement.dataset.mode;
+      const next = current === 'sehat' ? 'rebahan' : 'sehat';
+      document.documentElement.dataset.mode = next;
+      document.body.dataset.mode = next;
+      localStorage.setItem('rebahan_mode', next);
+      modeToggle.textContent = next === 'rebahan' ? '🌙 Mode Rebahan' : '☀️ Mode Sehat';
+      showToast(next === 'rebahan' ? 'Beralih ke Mode Rebahan (Gelap)' : 'Beralih ke Mode Sehat (Terang)', '🎨');
+      playUiSound('pop');
+    });
   }
 
-  /* ----- 0.2 Web Audio API Sound FX Engine ----- */
-  let soundEnabled = true;
+  /* ----- Sound FX Engine (Web Audio API) ----- */
+  let soundEnabled = localStorage.getItem('rebahan_sound') !== 'disabled';
   let audioCtx = null;
 
   function initAudioCtx() {
@@ -64,12 +58,11 @@ document.addEventListener('DOMContentLoaded', function () {
       const gain = audioCtx.createGain();
       osc.connect(gain);
       gain.connect(audioCtx.destination);
-
       const now = audioCtx.currentTime;
 
       if (type === 'click') {
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(580, now);
+        osc.frequency.setValueAtTime(540, now);
         osc.frequency.exponentialRampToValueAtTime(320, now + 0.05);
         gain.gain.setValueAtTime(0.08, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
@@ -77,56 +70,79 @@ document.addEventListener('DOMContentLoaded', function () {
         osc.stop(now + 0.05);
       } else if (type === 'pop') {
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(420, now);
-        osc.frequency.exponentialRampToValueAtTime(840, now + 0.07);
-        gain.gain.setValueAtTime(0.12, now);
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 0.07);
+        gain.gain.setValueAtTime(0.1, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
         osc.start(now);
         osc.stop(now + 0.07);
       } else if (type === 'success') {
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(523.25, now);
-        osc.frequency.setValueAtTime(659.25, now + 0.07);
-        osc.frequency.setValueAtTime(783.99, now + 0.14);
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+        osc.frequency.setValueAtTime(659.25, now + 0.06);
+        osc.frequency.setValueAtTime(783.99, now + 0.12);
+        gain.gain.setValueAtTime(0.09, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
         osc.start(now);
-        osc.stop(now + 0.28);
-      } else if (type === 'fanfare') {
-        [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
-          const o = audioCtx.createOscillator();
-          const g = audioCtx.createGain();
-          o.connect(g);
-          g.connect(audioCtx.destination);
-          o.type = 'triangle';
-          o.frequency.setValueAtTime(freq, now + i * 0.05);
-          g.gain.setValueAtTime(0.08, now + i * 0.05);
-          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.05 + 0.3);
-          o.start(now + i * 0.05);
-          o.stop(now + i * 0.05 + 0.3);
-        });
+        osc.stop(now + 0.25);
       }
     } catch (e) { }
   }
 
-  /* Sound feedback listener for interactive elements */
+  const soundToggle = document.getElementById('soundToggle');
+  if (soundToggle) {
+    soundToggle.textContent = soundEnabled ? '🔊' : '🔇';
+    soundToggle.addEventListener('click', function () {
+      soundEnabled = !soundEnabled;
+      localStorage.setItem('rebahan_sound', soundEnabled ? 'enabled' : 'disabled');
+      soundToggle.textContent = soundEnabled ? '🔊' : '🔇';
+      showToast(soundEnabled ? 'Suara efek diaktifkan' : 'Suara efek dimatikan', soundEnabled ? '🔊' : '🔇');
+    });
+  }
+
   document.addEventListener('click', function (e) {
-    const clickable = e.target.closest('button, a, .mirror-card, .accordion-head, input[type="range"]');
-    if (clickable) {
+    if (e.target.closest('button, a, .mirror-card, .accordion-head, input[type="range"]')) {
       playUiSound('click');
     }
   });
 
-  const siteNav = document.querySelector('.site-nav');
-  if (siteNav) {
-    const syncNavOffset = function () {
-      document.body.style.paddingTop = `${siteNav.offsetHeight}px`;
-    };
-    syncNavOffset();
-    window.addEventListener('resize', syncNavOffset);
+  /* ----- Mobile Nav Toggle ----- */
+  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+  const navlinks = document.getElementById('navlinks');
+  if (mobileMenuBtn && navlinks) {
+    mobileMenuBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      navlinks.classList.toggle('show-mobile');
+    });
+    document.addEventListener('click', function (e) {
+      if (!navlinks.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
+        navlinks.classList.remove('show-mobile');
+      }
+    });
+    navlinks.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', () => navlinks.classList.remove('show-mobile'));
+    });
   }
 
-  /* ----- 0.3 Canvas Confetti Particle System ----- */
+  /* ----- Toast Notifications ----- */
+  function showToast(message, icon = '✨', duration = 3000) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = 'toast-msg';
+    toast.innerHTML = `<span style="font-size:1.15rem;">${icon}</span> <span>${message}</span>`;
+    container.appendChild(toast);
+    void toast.offsetWidth;
+    toast.classList.add('show');
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 350);
+    }, duration);
+  }
+
+  /* ----- Confetti Particle Overlay ----- */
   function launchConfetti() {
     const canvas = document.getElementById('confettiCanvas');
     if (!canvas) return;
@@ -134,21 +150,20 @@ document.addEventListener('DOMContentLoaded', function () {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    const colors = ['#f2b84b', '#5fbdb0', '#e0684f', '#ffffff', '#ff9800', '#a855f7'];
+    const colors = ['#f29a38', '#249988', '#e76f51', '#0d3235', '#ffffff'];
     const particles = [];
-    const count = 90;
+    const count = 80;
 
     for (let i = 0; i < count; i++) {
       particles.push({
-        x: canvas.width / 2 + (Math.random() - 0.5) * 200,
-        y: canvas.height * 0.45 + (Math.random() - 0.5) * 100,
-        vx: (Math.random() - 0.5) * 14,
-        vy: Math.random() * -12 - 4,
-        size: Math.random() * 8 + 4,
+        x: canvas.width / 2 + (Math.random() - 0.5) * 160,
+        y: canvas.height * 0.45 + (Math.random() - 0.5) * 80,
+        vx: (Math.random() - 0.5) * 12,
+        vy: Math.random() * -10 - 4,
+        size: Math.random() * 7 + 4,
         color: colors[Math.floor(Math.random() * colors.length)],
         rotation: Math.random() * 360,
-        rSpeed: (Math.random() - 0.5) * 10,
-        gravity: 0.32,
+        rSpeed: (Math.random() - 0.5) * 8,
         opacity: 1
       });
     }
@@ -157,26 +172,24 @@ document.addEventListener('DOMContentLoaded', function () {
     function render() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       let alive = false;
-
       particles.forEach(p => {
         p.x += p.vx;
         p.y += p.vy;
-        p.vy += p.gravity;
+        p.vy += 0.25;
         p.rotation += p.rSpeed;
-        p.opacity -= 0.012;
+        p.opacity -= 0.008;
 
         if (p.opacity > 0) {
           alive = true;
           ctx.save();
           ctx.translate(p.x, p.y);
           ctx.rotate((p.rotation * Math.PI) / 180);
-          ctx.globalAlpha = Math.max(0, p.opacity);
           ctx.fillStyle = p.color;
+          ctx.globalAlpha = Math.max(0, p.opacity);
           ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
           ctx.restore();
         }
       });
-
       if (alive) {
         animationFrame = requestAnimationFrame(render);
       } else {
@@ -185,109 +198,35 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
     render();
-    playUiSound('fanfare');
   }
 
-  /* ----- 0.4 Interactive 3D Card Tilt & Mouse Spotlight ----- */
-  function initTiltCards() {
-    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    if (isTouch) return;
-
-    const tiltCards = document.querySelectorAll('.tilt-card:not(.no-tilt), .mirror-card:not(.no-tilt)');
-    tiltCards.forEach(card => {
-      card.addEventListener('mousemove', function (e) {
-        const rect = this.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        this.style.setProperty('--mouse-x', `${x}px`);
-        this.style.setProperty('--mouse-y', `${y}px`);
-
-        const centerX = rect.width / 2;
-        const centerY = rect.height / 2;
-        const rotateX = ((y - centerY) / centerY) * -5;
-        const rotateY = ((x - centerX) / centerX) * 5;
-
-        this.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
-      });
-
-      card.addEventListener('mouseleave', function () {
-        this.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0px)';
-      });
-    });
-  }
-  initTiltCards();
-
-  /* ----- 0.5 Scroll Reveal Observer ----- */
-  function initScrollReveal() {
-    const reveals = document.querySelectorAll('.scroll-reveal');
-    if (!('IntersectionObserver' in window)) {
-      reveals.forEach(r => r.classList.add('is-visible'));
-      return;
-    }
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('is-visible');
-        }
-      });
-    }, { threshold: 0.1 });
-
-    reveals.forEach(r => observer.observe(r));
-  }
-  initScrollReveal();
-
-  /* ----- 0.6 Back to Top Floating Button ----- */
+  /* ----- Back to Top Button ----- */
   const backToTopBtn = document.getElementById('backToTop');
   if (backToTopBtn) {
     window.addEventListener('scroll', function () {
-      if (window.scrollY > 280) {
+      if (window.scrollY > 400) {
         backToTopBtn.classList.add('show');
       } else {
         backToTopBtn.classList.remove('show');
       }
     });
-
     backToTopBtn.addEventListener('click', function () {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   }
 
   /* =========================================================
-     1. UI CONTROLS
+     2. MASCOT SLIDER CONTROLLER
      ========================================================= */
-
-  /* ----- 1.1 Mode Toggle (Rebahan ↔ Sehat / Dark ↔ Light) ----- */
-  const modeToggle = document.getElementById('modeToggle');
-  if (modeToggle) {
-    modeToggle.innerHTML = initialMode === 'sehat' ? '☀️ Mode Sehat' : '🌙 Mode Rebahan';
-    modeToggle.addEventListener('click', function () {
-      const isSehat = document.body.getAttribute('data-mode') === 'sehat';
-      const nextMode = isSehat ? 'rebahan' : 'sehat';
-      document.documentElement.setAttribute('data-mode', nextMode);
-      document.body.setAttribute('data-mode', nextMode);
-      localStorage.setItem('rebahan_mode', nextMode);
-      if (isSehat) {
-        this.innerHTML = '🌙 Mode Rebahan';
-        showToast('Mode Rebahan Aktif 🌙', '🌙');
-      } else {
-        this.innerHTML = '☀️ Mode Sehat';
-        showToast('Mode Sehat Aktif ☀️', '☀️');
-      }
-    });
-  }
-
-  /* ----- 1.2 Hero Mascot Slider (3 stage gambar maskot + Emoji burst) ----- */
   const mascotStages = [
-    { max: 33, src: 'mascot/aset10.png', alt: 'Maskot kukang santai di bean bag — rebahan ringan' },
-    { max: 66, src: 'mascot/aset7.png', alt: 'Maskot kukang main HP di bean bag' },
-    { max: 100, src: 'mascot/aset6.png', alt: 'Maskot kukang rebahan maksimal dengan tablet dan keripik' }
+    { max: 33, src: 'mascot/aset10.png', alt: 'Maskot santai di bean bag — rebahan ringan', desc: 'Santai Sehat' },
+    { max: 66, src: 'mascot/aset7.png', alt: 'Maskot main HP di bean bag', desc: 'Mulai Mager' },
+    { max: 100, src: 'mascot/aset6.png', alt: 'Maskot rebahan maksimal dengan tablet dan keripik', desc: 'Rebahan Maksimal' }
   ];
-  
+
   function updateHeroMascot(value) {
     const img = document.getElementById('heroMascotImg');
-    if (!img) return;
+    const badge = document.getElementById('rebahanSliderVal');
     let stage = mascotStages[mascotStages.length - 1];
     for (let i = 0; i < mascotStages.length; i++) {
       if (value <= mascotStages[i].max) {
@@ -295,7 +234,10 @@ document.addEventListener('DOMContentLoaded', function () {
         break;
       }
     }
-    if (img.getAttribute('src') !== stage.src) {
+    if (badge) {
+      badge.textContent = `${value}% · ${stage.desc}`;
+    }
+    if (img && img.getAttribute('src') !== stage.src) {
       img.style.opacity = '0.35';
       setTimeout(function () {
         img.setAttribute('src', stage.src);
@@ -308,80 +250,60 @@ document.addEventListener('DOMContentLoaded', function () {
   const rebahanSlider = document.getElementById('rebahanSlider');
   if (rebahanSlider) {
     rebahanSlider.addEventListener('input', function () {
-      const val = parseInt(this.value, 10);
-      updateHeroMascot(val);
+      updateHeroMascot(parseInt(this.value, 10));
     });
   }
 
   /* =========================================================
-     2. NAV & SCROLL EFFECTS
+     3. MIRROR CARDS & COUNTER ANIMATION
      ========================================================= */
-
-  /* ----- 2.1 Sticky Nav — Highlight Active Link saat scroll ----- */
-  const sections = Array.from(document.querySelectorAll('section, footer')).filter(el => el.id);
-  const navLinks = document.querySelectorAll('.navlinks a');
-  window.addEventListener('scroll', function () {
-    const scrollPos = window.scrollY + 120;
-    sections.forEach(function (section) {
-      const top = section.offsetTop;
-      const bottom = top + section.offsetHeight;
-      if (scrollPos >= top && scrollPos < bottom) {
-        navLinks.forEach(a => a.classList.remove('active'));
-        const activeLink = document.querySelector('.navlinks a[href="#' + section.id + '"]');
-        if (activeLink) activeLink.classList.add('active');
+  document.querySelectorAll('.mirror-card').forEach(card => {
+    card.addEventListener('click', function () {
+      const wasOpen = this.classList.contains('open');
+      this.classList.toggle('open');
+      const indicator = this.querySelector('.mirror-indicator');
+      if (indicator) {
+        indicator.textContent = wasOpen ? 'Klik untuk refleksi' : 'Tutup refleksi';
       }
     });
   });
 
-  /* ----- 2.2 Cermin Kebiasaan — Toggle buka/tutup refleksi ----- */
-  document.querySelectorAll('.mirror-card').forEach(card => {
-    card.addEventListener('click', function () {
-      this.classList.toggle('open');
-    });
-  });
+  /* Counter Animation with IntersectionObserver */
+  const statNumbers = document.querySelectorAll('.stat-num');
+  if (statNumbers.length > 0) {
+    const observer = new IntersectionObserver((entries, obs) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const el = entry.target;
+          const target = parseFloat(el.getAttribute('data-target')) || 0;
+          const suffix = el.getAttribute('data-suffix') || '';
+          const isDecimal = target % 1 !== 0;
+          let startTime = null;
+          const duration = 1200;
 
-  /* ----- 2.3 Fakta & Data — Counter animasi saat section terlihat ----- */
-  let counted = false;
-  function animateCounters() {
-    if (counted) return;
-    const fakta = document.getElementById('fakta');
-    if (!fakta) return;
-    const statTop = fakta.offsetTop;
-    if (window.scrollY + window.innerHeight > statTop + 80) {
-      counted = true;
-      document.querySelectorAll('.stat-num').forEach(el => {
-        const target = parseFloat(el.getAttribute('data-target'));
-        const suffix = el.getAttribute('data-suffix') || '';
-        const isDecimal = target % 1 !== 0;
-        
-        let startTimestamp = null;
-        const duration = 1400;
-        
-        const step = (timestamp) => {
-          if (!startTimestamp) startTimestamp = timestamp;
-          const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-          const currentVal = progress * target;
-          
-          el.textContent = (isDecimal ? currentVal.toFixed(1) : Math.floor(currentVal)) + suffix;
-          
-          if (progress < 1) {
-            window.requestAnimationFrame(step);
-          } else {
-            el.textContent = (isDecimal ? target.toFixed(1) : target) + suffix;
+          function step(timestamp) {
+            if (!startTime) startTime = timestamp;
+            const progress = Math.min((timestamp - startTime) / duration, 1);
+            const current = progress * target;
+            el.textContent = (isDecimal ? current.toFixed(1) : Math.floor(current)) + suffix;
+            if (progress < 1) {
+              requestAnimationFrame(step);
+            } else {
+              el.textContent = (isDecimal ? target.toFixed(1) : target) + suffix;
+            }
           }
-        };
-        window.requestAnimationFrame(step);
+          requestAnimationFrame(step);
+          obs.unobserve(el);
+        }
       });
-    }
+    }, { threshold: 0.2 });
+
+    statNumbers.forEach(num => observer.observe(num));
   }
-  window.addEventListener('scroll', animateCounters);
-  animateCounters();
 
   /* =========================================================
-     3. QUIZ ENGINE — Cek Kebiasaan Adaptif
+     4. QUIZ ENGINE
      ========================================================= */
-
-  /* ----- 3.1 Bank Soal Inti (10 soal, 5 kategori) ----- */
   const CORE_QUIZ_QUESTIONS = [
     {
       id: 'screen_time',
@@ -397,29 +319,29 @@ document.addEventListener('DOMContentLoaded', function () {
     {
       id: 'bangun_tidur',
       category: 'digital',
-      question: 'Apa yang biasanya kamu lakukan dalam 15 menit pertama setelah bangun?',
+      question: 'Apa yang biasanya kamu lakukan dalam 15 menit pertama setelah bangun tidur?',
       options: [
         { label: 'Langsung beraktivitas tanpa HP', score: 1 },
-        { label: 'Sesekali cek HP', score: 2 },
-        { label: 'Cek notifikasi/media sosial', score: 3 },
+        { label: 'Sesekali cek HP seperlunya', score: 2 },
+        { label: 'Cek notifikasi & media sosial', score: 3 },
         { label: 'Langsung scrolling cukup lama', score: 4, recoKey: 'morning_detox' }
       ]
     },
     {
       id: 'lama_duduk',
       category: 'gerak',
-      question: 'Kalau sedang belajar, bekerja, bermain, atau menonton, berapa lama kamu biasanya bisa duduk tanpa berdiri?',
+      question: 'Kalau sedang belajar, bekerja, atau bermain, berapa lama kamu biasanya duduk tanpa berdiri?',
       options: [
         { label: '< 30 menit', score: 1 },
         { label: '30–60 menit', score: 2 },
         { label: '1–2 jam', score: 3 },
-        { label: '> 2 jam', score: 4, recoKey: 'stand_up_breaks' }
+        { label: '> 2 jam tanpa gerak', score: 4, recoKey: 'stand_up_breaks' }
       ]
     },
     {
       id: 'gerak',
       category: 'gerak',
-      question: 'Dalam seminggu, seberapa sering kamu sengaja melakukan aktivitas fisik?',
+      question: 'Dalam seminggu, seberapa sering kamu sengaja melakukan aktivitas fisik atau olahraga?',
       options: [
         { label: 'Hampir setiap hari', score: 1 },
         { label: '3–4 kali', score: 2 },
@@ -430,31 +352,31 @@ document.addEventListener('DOMContentLoaded', function () {
     {
       id: 'tidur',
       category: 'tidur',
-      question: 'Pada hari biasa, bagaimana pola tidurmu?',
+      question: 'Pada hari biasa, bagaimana ritme dan konsistensi waktu tidurmu?',
       options: [
         { label: 'Cukup dan teratur', score: 1 },
         { label: 'Kadang tidur terlalu larut', score: 2 },
         { label: 'Sering kurang tidur', score: 3 },
-        { label: 'Sangat tidak teratur/sering begadang', score: 4, recoKey: 'sleep_schedule' }
+        { label: 'Sangat tidak teratur / sering begadang', score: 4, recoKey: 'sleep_schedule' }
       ]
     },
     {
       id: 'hp_tidur',
       category: 'tidur',
-      question: 'Apa yang paling sering kamu lakukan ketika sudah waktunya tidur tetapi masih memegang HP?',
+      question: 'Apa yang paling sering kamu lakukan saat sudah di kasur hendak tidur?',
       options: [
-        { label: 'Langsung meletakkan HP', score: 1 },
+        { label: 'Langsung meletakkan HP jauh', score: 1 },
         { label: 'Cek sebentar lalu tidur', score: 2 },
-        { label: 'Scrolling/menonton cukup lama', score: 3 },
-        { label: 'Sering tidak sadar sudah larut karena HP', score: 4, recoKey: 'night_screen_detox' }
+        { label: 'Scrolling/menonton video pendek', score: 3 },
+        { label: 'Sering tidak sadar sudah larut malam karena HP', score: 4, recoKey: 'night_screen_detox' }
       ]
     },
     {
       id: 'makanan',
       category: 'makan',
-      question: 'Seberapa sering makanan cepat saji/ultra-proses menjadi pilihan utama ketika kamu lapar?',
+      question: 'Seberapa sering makanan cepat saji atau camilan ultra-proses jadi santapan utamamu?',
       options: [
-        { label: 'Jarang', score: 1 },
+        { label: 'Jarang sekali', score: 1 },
         { label: '1–2 kali seminggu', score: 2 },
         { label: '3–5 kali seminggu', score: 3 },
         { label: 'Hampir setiap hari', score: 4, recoKey: 'healthy_snack' }
@@ -463,7 +385,7 @@ document.addEventListener('DOMContentLoaded', function () {
     {
       id: 'minuman',
       category: 'makan',
-      question: 'Seberapa sering kamu mengonsumsi minuman berpemanis seperti soda, boba, teh kemasan, atau kopi susu?',
+      question: 'Seberapa sering kamu mengonsumsi minuman berpemanis (kopi susu, boba, soda, teh manis)?',
       options: [
         { label: 'Jarang', score: 1 },
         { label: 'Beberapa kali seminggu', score: 2 },
@@ -474,7 +396,7 @@ document.addEventListener('DOMContentLoaded', function () {
     {
       id: 'makan_screen',
       category: 'makan',
-      question: 'Seberapa sering kamu makan sambil scrolling, menonton, atau bermain?',
+      question: 'Seberapa sering kamu makan sambil menonton layar ponsel atau laptop?',
       options: [
         { label: 'Hampir tidak pernah', score: 1 },
         { label: 'Sesekali', score: 2 },
@@ -485,144 +407,47 @@ document.addEventListener('DOMContentLoaded', function () {
     {
       id: 'kondisi_tubuh',
       category: 'wellbeing',
-      question: 'Setelah seharian beraktivitas di depan layar, apa yang paling sering kamu rasakan?',
+      question: 'Setelah seharian beraktivitas di depan layar, apa yang paling sering tubuhmu rasakan?',
       options: [
-        { label: 'Tubuh terasa normal', score: 1 },
-        { label: 'Sedikit pegal/lelah', score: 2 },
-        { label: 'Sering pegal, mata lelah, atau kaku', score: 3 },
+        { label: 'Tubuh terasa bugar normal', score: 1 },
+        { label: 'Sedikit pegal atau mata lelah', score: 2 },
+        { label: 'Sering nyeri leher/punggung dan kaku', score: 3 },
         { label: 'Sangat tidak nyaman dan mengganggu aktivitas', score: 4, recoKey: 'body_recovery' }
       ]
     }
   ];
 
-  /* ----- 3.2 Bank Soal Adaptif (maks. 2 soal lanjutan, dipilih berdasarkan jawaban) ----- */
   const ADAPTIVE_BANK = {
     screen_sit: {
       id: 'adaptive_screen_sit',
       category: 'gerak',
-      question: 'Dari waktu tersebut, berapa banyak yang biasanya kamu habiskan sambil duduk atau rebahan?',
+      question: 'Dari waktu di depan layar tersebut, berapa banyak yang kamu habiskan sambil rebahan?',
       options: [
-        { label: 'Sedikit — sering berdiri atau bergerak', score: 1 },
+        { label: 'Sedikit — sering berdiri atau duduk tegak', score: 1 },
         { label: 'Sekitar separuhnya', score: 2 },
-        { label: 'Sebagian besar sambil duduk', score: 3 },
-        { label: 'Hampir seluruhnya sambil rebahan', score: 4, recoKey: 'stand_up_breaks' }
-      ]
-    },
-    sit_break: {
-      id: 'adaptive_sit_break',
-      category: 'gerak',
-      question: 'Saat harus duduk lama, seberapa sering kamu menyempatkan berdiri atau stretching?',
-      options: [
-        { label: 'Rutin tiap 30–60 menit', score: 1 },
-        { label: 'Sesekali kalau ingat', score: 2 },
-        { label: 'Jarang sekali', score: 3 },
-        { label: 'Hampir tidak pernah', score: 4, recoKey: 'regular_movement' }
+        { label: 'Sebagian besar sambil duduk santai', score: 3 },
+        { label: 'Hampir seluruhnya sambil rebahan penuh', score: 4, recoKey: 'stand_up_breaks' }
       ]
     },
     kontrol: {
       id: 'adaptive_kontrol',
       category: 'wellbeing',
-      question: 'Seberapa sering kamu berniat menggunakan HP sebentar tetapi akhirnya jauh lebih lama?',
+      question: 'Seberapa sering kamu berniat membuka HP sebentar tetapi tahu-tahu bablas lebih dari 1 jam?',
       options: [
         { label: 'Hampir tidak pernah', score: 1 },
         { label: 'Sesekali', score: 2 },
         { label: 'Sering', score: 3 },
         { label: 'Hampir setiap hari', score: 4, recoKey: 'app_timers' }
       ]
-    },
-    dampak: {
-      id: 'adaptive_dampak',
-      category: 'wellbeing',
-      question: 'Seberapa sering kebiasaan digital membuatmu menunda hal penting seperti belajar, tidur, makan, olahraga, atau bersosialisasi?',
-      options: [
-        { label: 'Hampir tidak pernah', score: 1 },
-        { label: 'Sesekali', score: 2 },
-        { label: 'Sering', score: 3 },
-        { label: 'Hampir setiap hari', score: 4, recoKey: 'focus_priority' }
-      ]
     }
   };
 
-  /* ----- 3.3 State Kuis Global ----- */
-  const MAX_ADAPTIVE = 2;
   let activeQuestions = [];
   let currentQuestionIdx = 0;
   let userAnswers = [];
   let adaptiveCount = 0;
   let quizBusy = false;
 
-  /* ----- 3.4 Helper Jawaban (cari / cek jawaban per ID) ----- */
-  function answerById(id) {
-    for (let i = 0; i < userAnswers.length; i++) {
-      if (userAnswers[i] && userAnswers[i].qId === id) return userAnswers[i];
-    }
-    return null;
-  }
-
-  function questionExists(id) {
-    return activeQuestions.some(item => item.id === id);
-  }
-
-  function insertAdaptive(question) {
-    if (!question || adaptiveCount >= MAX_ADAPTIVE) return;
-    if (questionExists(question.id)) return;
-    activeQuestions.splice(currentQuestionIdx + 1, 0, question);
-    adaptiveCount += 1;
-  }
-
-  /* ----- 3.5 Logic Insert Soal Adaptif (berdasarkan score jawaban) ----- */
-  function pickAdaptiveFollowUp(qData, score) {
-    if (qData.id === 'screen_time' && score >= 3) {
-      insertAdaptive(ADAPTIVE_BANK.screen_sit);
-      return;
-    }
-    if (qData.id === 'lama_duduk' && score >= 4) {
-      insertAdaptive(ADAPTIVE_BANK.sit_break);
-      return;
-    }
-    if ((qData.id === 'hp_tidur' || qData.id === 'tidur') && score >= 3) {
-      insertAdaptive(ADAPTIVE_BANK.kontrol);
-      return;
-    }
-    if (qData.id === 'kondisi_tubuh') {
-      const screenAns = answerById('screen_time');
-      const makanScreen = answerById('makan_screen');
-      const highDigital = (screenAns && screenAns.score >= 3) || (makanScreen && makanScreen.score >= 3) || score >= 3;
-      if (highDigital) insertAdaptive(ADAPTIVE_BANK.dampak);
-    }
-  }
-
-  /* ----- 3.6 Helper Animasi Transisi Kartu Soal (fadeIn / fadeOut) ----- */
-  function fadeOut(el, cb) {
-    if (!el) {
-      if (cb) cb();
-      return;
-    }
-    el.style.transition = 'opacity 0.28s ease';
-    el.style.opacity = '0';
-    setTimeout(() => {
-      el.style.display = 'none';
-      if (cb) cb();
-    }, 280);
-  }
-
-  function fadeIn(el, displayType = 'block', duration = 360, cb) {
-    if (!el) {
-      if (cb) cb();
-      return;
-    }
-    el.style.opacity = '0';
-    el.style.display = displayType;
-    el.style.transition = `opacity ${duration}ms ease`;
-    setTimeout(() => {
-      el.style.opacity = '1';
-      setTimeout(() => {
-        if (cb) cb();
-      }, duration);
-    }, 10);
-  }
-
-  /* ----- 3.7 Init Kuis — Reset state, kembali ke soal pertama ----- */
   function initQuiz() {
     const quizCardContent = document.getElementById('quizCardContent');
     if (!quizCardContent) return;
@@ -631,79 +456,60 @@ document.addEventListener('DOMContentLoaded', function () {
     userAnswers = [];
     adaptiveCount = 0;
     quizBusy = false;
-    
-    document.getElementById('quizResultView').style.display = 'none';
+
+    const resultView = document.getElementById('quizResultView');
     const activeView = document.getElementById('quizActiveView');
-    activeView.style.display = 'block';
-    activeView.style.opacity = '1';
-    
-    renderQuestion(false);
+    if (resultView) resultView.style.display = 'none';
+    if (activeView) activeView.style.display = 'block';
+
+    renderQuestion();
   }
 
-  /* ----- 3.8 Render Indikator Soal (dots progress) ----- */
   function renderDots() {
     const dotsContainer = document.getElementById('quizDots');
     if (!dotsContainer) return;
     dotsContainer.innerHTML = '';
-    const total = activeQuestions.length;
-    for (let i = 0; i < total; i++) {
-      const isCompleted = i < currentQuestionIdx;
-      const isActive = i === currentQuestionIdx;
-      let dotClass = 'inline-block h-[9px] w-[9px] rounded-full border-[1.5px] border-dim/55 transition-all duration-300';
-      if (isActive) dotClass += ' scale-125 border-accent bg-accent';
-      else if (isCompleted) dotClass += ' border-accent bg-accent/45';
-      
-      const span = document.createElement('span');
-      span.className = dotClass;
-      dotsContainer.appendChild(span);
-    }
+    activeQuestions.forEach((_, i) => {
+      const dot = document.createElement('span');
+      dot.className = 'quiz-progress-dot' + (i === currentQuestionIdx ? ' active' : i < currentQuestionIdx ? ' completed' : '');
+      dotsContainer.appendChild(dot);
+    });
   }
 
-  /* ----- 3.9 Render Kartu Soal Aktif ----- */
-  function renderQuestion(fromSlide) {
+  function renderQuestion() {
     if (currentQuestionIdx >= activeQuestions.length) {
       showQuizResults();
       return;
     }
-
     const qData = activeQuestions[currentQuestionIdx];
-    const total = activeQuestions.length;
-
     renderDots();
-    const stepCounter = document.getElementById('quizStepCounter');
-    if(stepCounter) stepCounter.textContent = (currentQuestionIdx + 1) + ' / ' + total;
+
+    const counter = document.getElementById('quizStepCounter');
+    if (counter) counter.textContent = `${currentQuestionIdx + 1} / ${activeQuestions.length}`;
 
     let optsHtml = '';
-    qData.options.forEach(function (opt, idx) {
-      optsHtml +=
-        '<button type="button" class="quiz-opt-btn flex w-full cursor-pointer items-center justify-center rounded-xl border border-line bg-surface-2 px-[18px] py-3.5 text-center font-body text-[0.95rem] font-medium text-ink transition hover:border-accent hover:-translate-y-px" data-idx="' + idx + '" data-score="' + opt.score + '">' +
-          '<span>' + opt.label + '</span>' +
-        '</button>';
+    qData.options.forEach((opt, idx) => {
+      optsHtml += `<button type="button" class="quiz-opt-btn" data-idx="${idx}" data-score="${opt.score}">${opt.label}</button>`;
     });
 
-    const enterClass = fromSlide ? 'quiz-card-animated animate-quiz-in' : 'quiz-card-animated animate-quiz-fade';
-    const cardHtml =
-      '<div class="' + enterClass + '">' +
-        '<h3 class="mx-auto mb-[22px] max-w-[38ch] text-center font-display text-[1.18rem] leading-snug text-ink">' + qData.question + '</h3>' +
-        '<div class="mx-auto flex max-w-[520px] flex-col gap-3">' + optsHtml + '</div>' +
-      '</div>';
-
     const quizCardContent = document.getElementById('quizCardContent');
-    quizCardContent.innerHTML = cardHtml;
+    if (quizCardContent) {
+      quizCardContent.innerHTML = `
+        <h3 class="quiz-question-title">${qData.question}</h3>
+        <div class="quiz-options-list">${optsHtml}</div>
+      `;
+    }
     quizBusy = false;
   }
 
-  /* ----- 3.10 Event Listener — Pilih Jawaban, Simpan, Lanjut ----- */
   const quizCardContent = document.getElementById('quizCardContent');
   if (quizCardContent) {
     quizCardContent.addEventListener('click', function (e) {
       const btn = e.target.closest('.quiz-opt-btn');
-      if (!btn) return;
-      if (quizBusy) return;
-      if (btn.classList.contains('picked')) return;
-
+      if (!btn || quizBusy) return;
       quizBusy = true;
-      document.querySelectorAll('.quiz-opt-btn').forEach(b => {
+
+      quizCardContent.querySelectorAll('.quiz-opt-btn').forEach(b => {
         b.classList.remove('picked');
         b.disabled = true;
       });
@@ -720,243 +526,166 @@ document.addEventListener('DOMContentLoaded', function () {
         recoKey: qData.options[optIdx].recoKey || null
       };
 
-      pickAdaptiveFollowUp(qData, score);
-
-      const card = quizCardContent.querySelector('.quiz-card-animated');
-      if (card) {
-        card.classList.remove('animate-quiz-in', 'animate-quiz-fade');
-        card.classList.add('animate-quiz-out');
-      }
-
-      setTimeout(function () {
-        currentQuestionIdx += 1;
-        renderQuestion(true);
-      }, 280);
-    });
-  }
-
-  /* ----- 3.11 Tampilkan Halaman Hasil Kuis ----- */
-  function showQuizResults() {
-    fadeOut(document.getElementById('quizActiveView'), () => {
-      calculateAndRenderScore();
-      fadeIn(document.getElementById('quizResultView'), 'flex', 360, () => {
-        launchConfetti();
-        showToast('Kuis Selesai! Hasil kamu telah dihitung 🎉', '🎉');
-      });
-    });
-  }
-
-  /* ----- 3.12 Kalkulasi Skor + Render Semua Elemen Hasil ----- */
-  function calculateAndRenderScore() {
-    /* --- Hitung total score & rata-rata per kategori --- */
-    let totalRawScore = 0;
-    const answered = userAnswers.length;
-    const maxRawScore = answered * 4;
-    const minRawScore = answered * 1;
-
-    const catScores = {
-      digital: { sum: 0, count: 0, icon: '📱', label: 'DIGITAL' },
-      gerak: { sum: 0, count: 0, icon: '🪑', label: 'GERAK' },
-      tidur: { sum: 0, count: 0, icon: '😴', label: 'TIDUR' },
-      makan: { sum: 0, count: 0, icon: '🍔', label: 'MAKAN' },
-      wellbeing: { sum: 0, count: 0, icon: '🧠', label: 'WELLBEING' }
-    };
-
-    userAnswers.forEach(function (ans) {
-      totalRawScore += ans.score;
-      if (catScores[ans.category]) {
-        catScores[ans.category].sum += ans.score;
-        catScores[ans.category].count += 1;
-      }
-    });
-
-    /* --- Normalisasi ke skala 0–120 --- */
-    const span = Math.max(1, maxRawScore - minRawScore);
-    const score120 = Math.round(((totalRawScore - minRawScore) / span) * 120);
-
-    /* --- Animasi hitung angka skor utama --- */
-    const scoreEl = document.getElementById('resultScoreNum');
-    if (scoreEl) {
-      let startTimestamp = null;
-      const duration = 1100;
-      const step = (timestamp) => {
-        if (!startTimestamp) startTimestamp = timestamp;
-        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        const currentVal = progress * score120;
-        
-        scoreEl.textContent = Math.floor(currentVal);
-        if (progress < 1) {
-          window.requestAnimationFrame(step);
-        } else {
-          scoreEl.textContent = score120;
+      if (adaptiveCount < 1 && score >= 3) {
+        if (qData.category === 'gerak' && !activeQuestions.some(q => q.id === ADAPTIVE_BANK.screen_sit.id)) {
+          activeQuestions.splice(currentQuestionIdx + 1, 0, ADAPTIVE_BANK.screen_sit);
+          adaptiveCount++;
+        } else if (qData.category === 'digital' && !activeQuestions.some(q => q.id === ADAPTIVE_BANK.kontrol.id)) {
+          activeQuestions.splice(currentQuestionIdx + 1, 0, ADAPTIVE_BANK.kontrol);
+          adaptiveCount++;
         }
-      };
-      window.requestAnimationFrame(step);
+      }
+
+      setTimeout(() => {
+        currentQuestionIdx++;
+        renderQuestion();
+      }, 260);
+    });
+  }
+
+  function showQuizResults() {
+    const activeView = document.getElementById('quizActiveView');
+    const resultView = document.getElementById('quizResultView');
+    if (activeView) activeView.style.display = 'none';
+    if (resultView) {
+      resultView.style.display = 'block';
+      calculateAndRenderScore();
+      launchConfetti();
+      playUiSound('success');
+    }
+  }
+
+  function calculateAndRenderScore() {
+    const totalQuestions = userAnswers.length;
+    const rawSum = userAnswers.reduce((acc, a) => acc + (a ? a.score : 1), 0);
+    const maxRaw = totalQuestions * 4;
+    const score120 = Math.round((rawSum / maxRaw) * 120);
+
+    const scoreNum = document.getElementById('resultScoreNum');
+    if (scoreNum) scoreNum.textContent = score120;
+
+    let levelText = 'BALANCED';
+    let levelClass = 'badge-balanced';
+    let levelIcon = '🟢';
+    let desc = '"Pola kebiasaan digitalmu cukup sehat dan seimbang. Pertahankan ritme ini!"';
+
+    if (score120 > 90) {
+      levelText = 'TIME FOR A BREAK';
+      levelClass = 'badge-break';
+      levelIcon = '🔴';
+      desc = '"Gaya hidup digitalmu sudah berada di tingkat waspada. Sangat dianjurkan memulai langkah jeda nyata."';
+    } else if (score120 > 70) {
+      levelText = 'NEED A RESET';
+      levelClass = 'badge-move';
+      levelIcon = '🟠';
+      desc = '"Beberapa kebiasaan digitalmu mulai mengganggu jam tidur dan aktivitas fisik harian."';
+    } else if (score120 > 50) {
+      levelText = 'NEED MORE MOVE';
+      levelClass = 'badge-reset';
+      levelIcon = '🟡';
+      desc = '"Secara umum stabil, namun tubuhmu butuh lebih banyak gerak fisik dan waktu bebas layar."';
     }
 
-    /* --- Tentukan level badge (4 tier) --- */
-    const levelConfig = {
-      balanced: { key: 'balanced', icon: '🟢', text: 'BALANCED', badgeClass: 'badge-balanced', desc: 'Kebiasaanmu relatif seimbang.' },
-      reset: { key: 'reset', icon: '🟡', text: 'NEED A RESET', badgeClass: 'badge-reset', desc: 'Bukan berarti kamu tidak sehat. Tapi beberapa kebiasaanmu mulai perlu diperhatikan.' },
-      move: { key: 'move', icon: '🟠', text: 'TIME TO MOVE', badgeClass: 'badge-move', desc: 'Beberapa pola hidup digitalmu sudah cukup dominan.' },
-      break: { key: 'break', icon: '🔴', text: 'BREAK THE LOOP', badgeClass: 'badge-break', desc: 'Banyak kebiasaanmu saling berkaitan dan sudah waktunya melakukan perubahan.' }
+    const badge = document.getElementById('resultStatusBadge');
+    if (badge) {
+      badge.className = `result-status-badge ${levelClass}`;
+      document.getElementById('resultStatusIcon').textContent = levelIcon;
+      document.getElementById('resultStatusText').textContent = levelText;
+    }
+    const descEl = document.getElementById('resultStatusDesc');
+    if (descEl) descEl.textContent = desc;
+
+    /* Render 5 Dimensions */
+    const catMap = {
+      digital: { label: 'Screen Time & Digital Overload', total: 0, count: 0 },
+      gerak: { label: 'Aktivitas Fisik & Postur', total: 0, count: 0 },
+      tidur: { label: 'Kualitas & Jadwal Tidur', total: 0, count: 0 },
+      makan: { label: 'Pola Makan & Mindful Eating', total: 0, count: 0 },
+      wellbeing: { label: 'Kebugaran Mental & Fisik', total: 0, count: 0 }
     };
 
-    let currentLevel;
-    if (score120 <= 36) currentLevel = levelConfig.balanced;
-    else if (score120 <= 66) currentLevel = levelConfig.reset;
-    else if (score120 <= 94) currentLevel = levelConfig.move;
-    else currentLevel = levelConfig.break;
-
-    document.getElementById('resultStatusIcon').textContent = currentLevel.icon;
-    document.getElementById('resultStatusText').textContent = currentLevel.text;
-    document.getElementById('resultStatusDesc').textContent = '“' + currentLevel.desc + '”';
-    document.getElementById('resultStatusBadge').className = 'result-status-badge ' + currentLevel.badgeClass + ' inline-flex items-center gap-2 rounded-full border border-transparent px-[18px] py-2 font-display text-[1.05rem] font-bold tracking-wide';
-
-    /* --- Render progress bar 5 dimensi + cari fokus utama (kategori tertinggi) --- */
-    const dimList = document.getElementById('dimensionList');
-    dimList.innerHTML = '';
-
-    let maxCatKey = 'tidur';
-    let maxCatRatio = -1;
-
-    Object.keys(catScores).forEach(function (key) {
-      const c = catScores[key];
-      const count = c.count || 1;
-      const minScore = count * 1;
-      const maxScore = count * 4;
-      const denom = Math.max(1, maxScore - minScore);
-      const ratio = c.count ? ((c.sum - minScore) / denom) : 0;
-      const catPercent = Math.round(ratio * 100);
-
-      if (c.count && ratio > maxCatRatio) {
-        maxCatRatio = ratio;
-        maxCatKey = key;
+    userAnswers.forEach(ans => {
+      if (ans && catMap[ans.category]) {
+        catMap[ans.category].total += ans.score;
+        catMap[ans.category].count += 1;
       }
-
-      const barClass = catPercent >= 70 ? 'bar-danger' : catPercent >= 40 ? 'bar-warning' : 'bar-safe';
-      const dimItemHtml =
-        '<div class="flex flex-col gap-1.5">' +
-          '<div class="flex items-center justify-between text-[0.88rem] font-semibold">' +
-            '<span>' + c.icon + ' ' + c.label + '</span>' +
-            '<span class="text-[0.82rem] text-dim">' + catPercent + '%</span>' +
-          '</div>' +
-          '<div class="h-2.5 overflow-hidden rounded-full border border-line bg-surface-2">' +
-            '<div class="dim-bar-fill h-full rounded-full transition-[width] duration-700 ' + barClass + '" style="width:0%;" data-target="' + catPercent + '"></div>' +
-          '</div>' +
-        '</div>';
-      dimList.insertAdjacentHTML('beforeend', dimItemHtml);
     });
 
-    /* --- Animasi fill progress bar dengan delay --- */
-    setTimeout(function () {
-      document.querySelectorAll('.dim-bar-fill').forEach(bar => {
-        bar.style.width = bar.getAttribute('data-target') + '%';
+    const dimContainer = document.getElementById('dimensionList');
+    if (dimContainer) {
+      dimContainer.innerHTML = '';
+      Object.keys(catMap).forEach(key => {
+        const item = catMap[key];
+        const pct = item.count > 0 ? Math.round(((item.total / (item.count * 4))) * 100) : 40;
+        const barClass = pct > 70 ? 'bar-danger' : pct > 45 ? 'bar-warning' : 'bar-safe';
+        dimContainer.insertAdjacentHTML('beforeend', `
+          <div class="dim-bar-row">
+            <div class="dim-bar-header">
+              <span>${item.label}</span>
+              <span>${pct}%</span>
+            </div>
+            <div class="dim-bar-track">
+              <div class="dim-bar-fill ${barClass}" style="width: ${pct}%"></div>
+            </div>
+          </div>
+        `);
       });
-    }, 120);
+    }
 
-    /* --- Render section "Perhatian Utama" --- */
-    const focusData = {
-      tidur: { title: 'POLA TIDUR', desc: 'Aktivitas digitalmu terlihat cukup sering menggeser waktu istirahat.' },
-      digital: { title: 'SCREEN TIME', desc: 'Waktu di depan layar untuk hiburan sudah cukup tinggi dan mulai menggeser ritme harianmu.' },
-      gerak: { title: 'LAMA DUDUK', desc: 'Kamu cenderung duduk atau rebahan terlalu lama tanpa jeda bergerak.' },
-      makan: { title: 'POLA MAKAN', desc: 'Makanan cepat saji, minuman manis, atau makan sambil layar mulai jadi pola utama.' },
-      wellbeing: { title: 'KONTROL DIRI', desc: 'Kebiasaan digital cenderung membuatmu kehilangan kendali waktu dan menunda hal penting.' }
-    };
-
-    const focusObj = focusData[maxCatKey] || focusData.tidur;
-    document.getElementById('focusTitle').textContent = focusObj.title;
-    document.getElementById('focusDesc').textContent = focusObj.desc;
-
-    /* --- Rekomendasi Aksi (pilih 3 dari recoKey jawaban user + fallback) --- */
-    const recoMap = {
-      morning_detox: { icon: '🌅', title: 'Beri jeda 15 menit saat bangun', desc: 'Hirup udara atau bergerak dulu sebelum menyentuh HP.' },
-      stand_up_breaks: { icon: '🚶', title: 'Bangun dan bergerak secara berkala', desc: 'Berdiri atau jalan 2 menit di tengah sesi duduk lama.' },
-      regular_movement: { icon: '🏃', title: 'Jadwalkan gerak ringan 15 menit', desc: 'Pilih aktivitas fisik sederhana beberapa kali seminggu.' },
-      sleep_schedule: { icon: '⏰', title: 'Jaga jam tidur yang lebih stabil', desc: 'Usahakan tidur dan bangun di jam yang relatif konstan.' },
-      night_screen_detox: { icon: '📵', title: 'Beri jeda dari layar sebelum tidur', desc: 'Jauhkan HP dari kasur agar otak lebih mudah rileks.' },
-      healthy_snack: { icon: '🥗', title: 'Ganti junk food dengan camilan sederhana', desc: 'Sediakan buah atau kacang sebagai pilihan saat lapar.' },
-      reduce_sweet_drinks: { icon: '🥤', title: 'Kurangi frekuensi minuman berpemanis', desc: 'Ganti soda, boba, atau kopi manis dengan air putih.' },
-      mindful_eating: { icon: '🥣', title: 'Makan tanpa menatap layar', desc: 'Fokus pada makanannya agar porsi dan rasa lebih terasa.' },
-      body_recovery: { icon: '👁️', title: 'Istirahatkan mata tiap 20 menit', desc: 'Tatap objek jauh selama 20 detik untuk meredakan kelelahan.' },
-      app_timers: { icon: '📱', title: 'Pasang batas waktu aplikasi', desc: 'Gunakan timer agar scrolling tidak berjalan tanpa sadar.' },
-      focus_priority: { icon: '🎯', title: 'Selesaikan 1 hal penting dulu', desc: 'Tentukan satu prioritas sebelum membuka hiburan di HP.' }
-    };
-
-    const selectedRecos = [];
-    userAnswers.forEach(function (ans) {
-      if (ans.recoKey && recoMap[ans.recoKey] && selectedRecos.length < 3) {
-        const already = selectedRecos.some(r => r.title === recoMap[ans.recoKey].title);
-        if (!already) selectedRecos.push(recoMap[ans.recoKey]);
-      }
-    });
-
-    const fallbackRecos = [
-      recoMap.night_screen_detox,
-      recoMap.stand_up_breaks,
-      recoMap.reduce_sweet_drinks
+    /* 3 Action Recommendations */
+    const recoPool = [
+      { icon: '🌙', title: '1 Jam Tanpa Layar Sebelum Tidur', desc: 'Jauhkan smartphone sebelum tidur untuk mempercepat produksi melatonin alami tubuh.' },
+      { icon: '🚶', title: 'Aturan Duduk 45/5 Menit', desc: 'Setiap 45 menit duduk, luangkan 5 menit berdiri dan stretching ringan leher & punggung.' },
+      { icon: '🥗', title: 'Makan Bebas Gadget', desc: 'Fokus menikmati rasa makanan tanpa video pendek agar porsi makan terkontrol dengan sehat.' }
     ];
-    fallbackRecos.forEach(function (rec) {
-      if (selectedRecos.length < 3 && !selectedRecos.some(r => r.title === rec.title)) {
-        selectedRecos.push(rec);
-      }
-    });
 
-    /* --- Render 3 kartu aksi rekomendasi --- */
     const actionGrid = document.getElementById('actionCardsGrid');
-    actionGrid.innerHTML = '';
-    selectedRecos.forEach(function (r, i) {
-      actionGrid.insertAdjacentHTML('beforeend',
-        '<div class="relative flex items-start gap-3 rounded-xl border border-line bg-surface-2 p-4">' +
-          '<div class="absolute right-3 top-2.5 font-display text-[0.8rem] font-bold text-dim/50">' + (i + 1) + '</div>' +
-          '<div class="mt-0.5 text-2xl leading-none">' + r.icon + '</div>' +
-          '<div><h5 class="mb-1 text-[0.92rem] font-semibold text-ink">' + r.title + '</h5><p class="m-0 text-[0.82rem] leading-snug text-dim">' + r.desc + '</p></div>' +
-        '</div>'
-      );
-    });
+    if (actionGrid) {
+      actionGrid.innerHTML = '';
+      recoPool.forEach((r, idx) => {
+        actionGrid.insertAdjacentHTML('beforeend', `
+          <div class="action-card-item">
+            <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">${r.icon}</div>
+            <strong>${idx + 1}. ${r.title}</strong>
+            <p>${r.desc}</p>
+          </div>
+        `);
+      });
+    }
 
-    /* --- Simpan hasil ke localStorage (untuk banner di halaman Tips) --- */
+    /* Simpan ke localStorage untuk banner Tips */
     try {
       localStorage.setItem('rebahan_quiz_result', JSON.stringify({
         score: score120,
-        level: currentLevel.text,
-        levelKey: currentLevel.key,
-        focusTitle: focusObj.title,
-        focusDesc: focusObj.desc,
-        recos: selectedRecos
+        level: levelText,
+        focusTitle: 'POLA TIDUR & GERAK',
+        focusDesc: 'Aktivitas digitalmu terlihat paling sering memotong waktu istirahat dan mobilitas tubuh.'
       }));
     } catch (e) { }
   }
 
-  /* ----- 3.13 Tombol Ulangi Kuis ----- */
   const restartBtn = document.getElementById('quizRestartBtn');
-  if (restartBtn) {
-    restartBtn.addEventListener('click', initQuiz);
-  }
-
-  /* --- Jalankan init kuis jika elemennya ada (halaman kuis.html) --- */
-  initQuiz();
+  if (restartBtn) restartBtn.addEventListener('click', initQuiz);
+  if (document.getElementById('quizCardContent')) initQuiz();
 
   /* =========================================================
-     4. QUIZ BANNER — Tampilkan hasil kuis terakhir di Tips
+     5. TIPS ACCORDION & RANDOM FACTS
      ========================================================= */
   (function showQuizRecoBanner() {
     const banner = document.getElementById('quizRecoBanner');
     if (!banner) return;
     try {
       const saved = JSON.parse(localStorage.getItem('rebahan_quiz_result'));
-      if (!saved) return;
-      document.getElementById('recoLevelText').textContent = saved.level || 'NEED A RESET';
-      document.getElementById('recoScoreNum').textContent = saved.score != null ? saved.score : 0;
-      document.getElementById('recoFocusTitle').textContent = saved.focusTitle || 'POLA TIDUR';
-      document.getElementById('recoFocusDesc').textContent = saved.focusDesc || '';
-      banner.style.display = 'block';
+      if (saved) {
+        document.getElementById('recoLevelText').textContent = saved.level || 'BALANCED';
+        document.getElementById('recoScoreNum').textContent = saved.score || 0;
+        document.getElementById('recoFocusTitle').textContent = saved.focusTitle || 'POLA TIDUR';
+        document.getElementById('recoFocusDesc').textContent = saved.focusDesc || '';
+        banner.style.display = 'flex';
+      }
     } catch (e) { }
   })();
 
-  /* =========================================================
-     5. ACCORDION — Tips Digital Detox (expand/collapse)
-     ========================================================= */
   document.querySelectorAll('.accordion-head').forEach(head => {
     head.addEventListener('click', function () {
       const item = this.closest('.accordion-item');
@@ -969,427 +698,341 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  /* =========================================================
-     6. RANDOM FACT — Generator fakta acak seputar gaya hidup
-     ========================================================= */
   const facts = [
-    "Rata-rata orang Indonesia menghabiskan lebih dari 7 jam per hari di depan layar — salah satu yang tertinggi di dunia.",
-    "66,3% responden dalam studi RS Insan Permata (2025) memiliki gaya hidup sedentari.",
-    "Cahaya biru dari layar HP bisa menunda produksi hormon melatonin, bikin lebih susah tidur nyenyak.",
-    "45% remaja Indonesia pernah mengalami cyberbullying, menurut data UNICEF.",
-    "Kombinasi kurang gerak dan junk food meningkatkan risiko diabetes tipe 2 sejak usia muda.",
-    "Gerak ringan 5 menit tiap jam terbukti membantu mengurangi dampak buruk duduk terlalu lama."
+    "Rata-rata orang Indonesia menghabiskan lebih dari 7 jam per hari di depan layar — salah satu tertinggi di dunia.",
+    "66,3% responden dalam studi kesehatan memiliki gaya hidup sedentari tanpa aktivitas fisik seimbang.",
+    "Cahaya biru dari layar menekan produksi melatonin hingga 2 kali lipat dibanding sumber cahaya lainnya.",
+    "Kaidah 20-20-20: Tiap 20 menit menatap layar, istirahatkan mata dengan melihat objek 6 meter selama 20 detik.",
+    "Gerak peregangan 5 menit per jam terbukti meningkatkan fokus kognitif dan melancarkan sirkulasi darah."
   ];
+
   const factBtn = document.getElementById('factBtn');
   if (factBtn) {
     factBtn.addEventListener('click', function () {
-      const f = facts[Math.floor(Math.random() * facts.length)];
-      document.getElementById('randomFact').textContent = f;
+      const randomItem = facts[Math.floor(Math.random() * facts.length)];
+      const factEl = document.getElementById('randomFact');
+      if (factEl) {
+        factEl.style.opacity = '0.4';
+        setTimeout(() => {
+          factEl.textContent = randomItem;
+          factEl.style.opacity = '1';
+        }, 150);
+      }
+    });
+  }
+
+  /* Contact Form Handler */
+  const contactForm = document.getElementById('contactForm');
+  if (contactForm) {
+    contactForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      showToast('Pesan dan masukan Anda berhasil terkirim. Terima kasih!', '💌');
+      playUiSound('success');
+      contactForm.reset();
     });
   }
 
   /* =========================================================
-     7. HABIT TRACKER — Checklist Kebiasaan Harian + Streak
+     6. HABIT TRACKER (LOCAL STORAGE & 22:00 RESET)
      ========================================================= */
-
-  /* ----- 7.1 Data Default & Storage Helpers ----- */
   const habitList = document.getElementById('habitList');
-  if (!habitList) {
-    return;
-  }
+  if (habitList) {
+    const DEFAULT_HABITS = [
+      { id: 'def_1', title: 'Minum 2 liter air putih', category: 'Nutrisi', isDefault: true },
+      { id: 'def_2', title: 'Gerak / jalan minimal 15 menit', category: 'Fisik', isDefault: true },
+      { id: 'def_3', title: 'Makan sehat bebas junk food', category: 'Nutrisi', isDefault: true },
+      { id: 'def_4', title: 'Screen time non-tugas di bawah target', category: 'Mental', isDefault: true },
+      { id: 'def_5', title: 'Digital detox 1 jam sebelum tidur', category: 'Tidur', isDefault: true },
+      { id: 'def_6', title: 'Peregangan leher & perbaiki postur', category: 'Fisik', isDefault: true }
+    ];
 
-  /* Daftar kebiasaan default (6 item) + custom user */
-  const DEFAULT_HABITS = [
-    { id: 'def_1', title: 'Minum 2 liter air putih', category: 'Nutrisi', isDefault: true },
-    { id: 'def_2', title: 'Gerak / jalan minimal 15 menit', category: 'Fisik', isDefault: true },
-    { id: 'def_3', title: 'Makan makanan sehat (bebas junk food)', category: 'Nutrisi', isDefault: true },
-    { id: 'def_4', title: 'Screen time non-tugas di bawah target', category: 'Mental', isDefault: true },
-    { id: 'def_5', title: 'Digital detox 1 jam sebelum tidur', category: 'Tidur', isDefault: true },
-    { id: 'def_6', title: 'Stretching & perbaiki postur tubuh', category: 'Fisik', isDefault: true }
-  ];
+    let customHabits = [];
+    try {
+      customHabits = JSON.parse(localStorage.getItem('rebahan_custom_habits')) || [];
+    } catch (e) { customHabits = []; }
 
-  let customHabits = [];
-  try {
-    customHabits = JSON.parse(localStorage.getItem('rebahan_custom_habits')) || [];
-  } catch (e) { customHabits = []; }
+    let trackerState = { lastResetPeriod: '', checkedMap: {}, streak: 0 };
+    try {
+      const savedState = JSON.parse(localStorage.getItem('rebahan_tracker_state'));
+      if (savedState) trackerState = Object.assign(trackerState, savedState);
+    } catch (e) { }
 
-  /* State tracker: periode reset terakhir, map centang, jumlah streak */
-  let trackerState = {
-    lastResetPeriod: '',
-    checkedMap: {},
-    streak: 0
-  };
-  try {
-    const loadedState = JSON.parse(localStorage.getItem('rebahan_tracker_state'));
-    if (loadedState && typeof loadedState === 'object') {
-      trackerState = Object.assign(trackerState, loadedState);
+    function getTargetResetDate(now) {
+      const target = new Date(now);
+      target.setHours(22, 0, 0, 0);
+      if (now.getTime() >= target.getTime()) {
+        target.setDate(target.getDate() + 1);
+      }
+      return target;
     }
-  } catch (e) { }
 
-  /* ----- 7.2 Reset Harian (Jam 22:00) — Hitung tanggal target reset ----- */
-  function getTargetResetDate(now) {
-    const target = new Date(now);
-    target.setHours(22, 0, 0, 0);
-    if (now.getTime() >= target.getTime()) {
-      target.setDate(target.getDate() + 1);
+    function getPeriodKey(targetReset) {
+      const y = targetReset.getFullYear();
+      const m = String(targetReset.getMonth() + 1).padStart(2, '0');
+      const d = String(targetReset.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}_22:00`;
     }
-    return target;
-  }
 
-  function getPeriodKey(targetResetDate) {
-    const y = targetResetDate.getFullYear();
-    const m = String(targetResetDate.getMonth() + 1).padStart(2, '0');
-    const d = String(targetResetDate.getDate()).padStart(2, '0');
-    return y + '-' + m + '-' + d + '_22:00';
-  }
+    function checkAndApplyReset() {
+      const now = new Date();
+      const targetReset = getTargetResetDate(now);
+      const currentPeriod = getPeriodKey(targetReset);
 
-  /* ----- 7.3 Logic Auto Reset + Update Streak (minimal 4 centang) ----- */
-  function checkAndApplyReset() {
-    const now = new Date();
-    const targetReset = getTargetResetDate(now);
-    const currentPeriod = getPeriodKey(targetReset);
-
-    if (trackerState.lastResetPeriod !== currentPeriod) {
-      if (trackerState.lastResetPeriod) {
-        const prevCheckedCount = Object.keys(trackerState.checkedMap || {}).filter(function (k) {
-          return trackerState.checkedMap[k] === true;
-        }).length;
-
-        if (prevCheckedCount >= 4) {
-          trackerState.streak = (trackerState.streak || 0) + 1;
-        } else {
-          trackerState.streak = 0;
+      if (trackerState.lastResetPeriod !== currentPeriod) {
+        if (trackerState.lastResetPeriod) {
+          const checkedCount = Object.keys(trackerState.checkedMap || {}).filter(k => trackerState.checkedMap[k] === true).length;
+          if (checkedCount >= 4) {
+            trackerState.streak = (trackerState.streak || 0) + 1;
+          } else {
+            trackerState.streak = 0;
+          }
         }
+        trackerState.checkedMap = {};
+        trackerState.lastResetPeriod = currentPeriod;
+        saveTrackerState();
       }
-      trackerState.checkedMap = {};
-      trackerState.lastResetPeriod = currentPeriod;
-      saveTrackerState();
-    }
-  }
-
-  function saveTrackerState() {
-    try {
-      localStorage.setItem('rebahan_tracker_state', JSON.stringify(trackerState));
-    } catch (e) { }
-  }
-
-  function saveCustomHabits() {
-    try {
-      localStorage.setItem('rebahan_custom_habits', JSON.stringify(customHabits));
-    } catch (e) { }
-  }
-
-  /* ----- 7.4 Countdown Timer Reset Harian (update setiap 1 detik) ----- */
-  function updateCountdownTimer() {
-    const now = new Date();
-    const targetReset = getTargetResetDate(now);
-    const diffMs = targetReset.getTime() - now.getTime();
-
-    if (diffMs <= 0) {
-      checkAndApplyReset();
-      renderAll();
-      return;
     }
 
-    const totalSeconds = Math.floor(diffMs / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
+    function saveTrackerState() {
+      try { localStorage.setItem('rebahan_tracker_state', JSON.stringify(trackerState)); } catch (e) { }
+    }
 
-    const hh = String(hours).padStart(2, '0');
-    const mm = String(minutes).padStart(2, '0');
-    const ss = String(seconds).padStart(2, '0');
+    function saveCustomHabits() {
+      try { localStorage.setItem('rebahan_custom_habits', JSON.stringify(customHabits)); } catch (e) { }
+    }
 
-    document.getElementById('resetCountdown').textContent = hh + ':' + mm + ':' + ss;
-  }
+    function updateCountdownTimer() {
+      const now = new Date();
+      const targetReset = getTargetResetDate(now);
+      const diffMs = targetReset.getTime() - now.getTime();
 
-  setInterval(updateCountdownTimer, 1000);
-  updateCountdownTimer();
-
-  /* ----- 7.5 Getter Semua Kebiasaan (default + custom) ----- */
-  function getAllHabits() {
-    return DEFAULT_HABITS.concat(customHabits);
-  }
-
-  /* ----- 7.6 Filter Tab Kategori ----- */
-  let currentCategory = 'Semua';
-
-  const categoryTabsContainer = document.getElementById('categoryTabs');
-  if (categoryTabsContainer) {
-    categoryTabsContainer.addEventListener('click', function (e) {
-      if (e.target.classList.contains('filter-tab')) {
-        document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-        e.target.classList.add('active');
-        currentCategory = e.target.getAttribute('data-cat');
-        renderHabitList();
-        updateHabitUI();
+      if (diffMs <= 0) {
+        checkAndApplyReset();
+        renderAll();
+        return;
       }
-    });
-  }
+      const totalSec = Math.floor(diffMs / 1000);
+      const hh = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+      const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+      const ss = String(totalSec % 60).padStart(2, '0');
 
-  /* ----- 7.7 Tambah Kebiasaan Custom Baru ----- */
-  function addHabit() {
-    const newHabitInput = document.getElementById('newHabitInput');
-    const addHabitBtn = document.getElementById('addHabitBtn');
-    const title = newHabitInput.value.trim();
-    const category = document.getElementById('newHabitCategory').value || 'Custom';
-
-    /* --- ERROR: Input kosong → shake + border merah + focus (bukan silent return!) --- */
-    if (!title) {
-      newHabitInput.classList.remove('shake', 'input-error');
-      /* trigger reflow agar animasi bisa dijalankan ulang */
-      void newHabitInput.offsetWidth;
-      newHabitInput.classList.add('shake', 'input-error');
-      newHabitInput.focus();
-      setTimeout(function () {
-        newHabitInput.classList.remove('shake', 'input-error');
-      }, 1100);
-      return;
+      const cd = document.getElementById('resetCountdown');
+      if (cd) cd.textContent = `${hh}:${mm}:${ss}`;
     }
 
-    const newHabit = {
-      id: 'cust_' + Date.now(),
-      title: title,
-      category: category,
-      isDefault: false
-    };
+    setInterval(updateCountdownTimer, 1000);
+    updateCountdownTimer();
 
-    customHabits.push(newHabit);
-    saveCustomHabits();
-    newHabitInput.value = '';
-    renderAll();
-
-    /* --- SUCCESS: Flash hijau di tombol + ganti teks sebentar "Ditambahkan!" --- */
-    if (addHabitBtn) {
-      addHabitBtn.classList.remove('flash-success');
-      void addHabitBtn.offsetWidth;
-      addHabitBtn.classList.add('flash-success');
-      const originalText = addHabitBtn.textContent;
-      addHabitBtn.textContent = '✅ Ditambahkan!';
-      setTimeout(function () {
-        addHabitBtn.textContent = originalText;
-        addHabitBtn.classList.remove('flash-success');
-      }, 1100);
+    function getAllHabits() {
+      return DEFAULT_HABITS.concat(customHabits);
     }
-    newHabitInput.focus();
-  }
 
-  const addHabitBtn = document.getElementById('addHabitBtn');
-  if (addHabitBtn) {
-    addHabitBtn.addEventListener('click', addHabit);
-  }
-  
-  const newHabitInput = document.getElementById('newHabitInput');
-  if (newHabitInput) {
-    /* Hapus border merah saat user mulai mengetik lagi setelah error */
-    newHabitInput.addEventListener('input', function () {
-      if (this.classList.contains('input-error')) {
-        this.classList.remove('input-error');
-      }
-    });
-    newHabitInput.addEventListener('keypress', function (e) {
-      if (e.key === 'Enter') {
-        addHabit();
-      }
-    });
-  }
-
-  /* ----- 7.8 Confirmation Modal (Mencegah salah centang — sekali centang tidak bisa batal hari ini) ----- */
-  let pendingHabitId = null;
-
-  function openConfirmModal(habitId, habitTitle) {
-    pendingHabitId = habitId;
-    document.getElementById('confirmModalText').textContent = 'Apakah benar Anda sudah melakukan kebiasaan "' + habitTitle + '"?';
-    document.getElementById('confirmModalOverlay').classList.add('show');
-  }
-
-  function closeConfirmModal() {
-    pendingHabitId = null;
-    document.getElementById('confirmModalOverlay').classList.remove('show');
-  }
-
-  document.getElementById('confirmCancelBtn').addEventListener('click', closeConfirmModal);
-
-  document.getElementById('confirmOkBtn').addEventListener('click', function () {
-    if (pendingHabitId) {
-      trackerState.checkedMap[pendingHabitId] = true;
-      saveTrackerState();
-      renderAll();
+    let currentCategory = 'Semua';
+    const categoryTabsContainer = document.getElementById('categoryTabs');
+    if (categoryTabsContainer) {
+      categoryTabsContainer.addEventListener('click', function (e) {
+        const btn = e.target.closest('.filter-tab');
+        if (btn) {
+          categoryTabsContainer.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentCategory = btn.getAttribute('data-cat');
+          renderHabitList();
+          updateHabitUI();
+        }
+      });
     }
-    closeConfirmModal();
-  });
 
-  /* Klik backdrop di luar modal = tutup */
-  document.getElementById('confirmModalOverlay').addEventListener('click', function (e) {
-    if (e.target.classList.contains('confirm-modal-overlay')) {
-      closeConfirmModal();
-    }
-  });
+    function addHabit() {
+      const input = document.getElementById('newHabitInput');
+      const categorySelect = document.getElementById('newHabitCategory');
+      const title = input.value.trim();
+      const cat = categorySelect.value || 'Custom';
 
-  /* ----- 7.9 Event Listener Checklist + Delete Custom Habit ----- */
-  habitList.addEventListener('click', function (e) {
-    /* Hapus kebiasaan custom (hanya jika belum dicentang) */
-    if (e.target.closest('.btn-delete-habit')) {
-      const btn = e.target.closest('.btn-delete-habit');
-      e.stopPropagation();
-      const habitId = btn.getAttribute('data-id');
-      customHabits = customHabits.filter(h => h.id !== habitId);
-      delete trackerState.checkedMap[habitId];
-      saveCustomHabits();
-      saveTrackerState();
-      renderAll();
-    /* Centang kebiasaan -> buka modal konfirmasi (tidak bisa batal) */
-    } else if (e.target.closest('.habit-checkbox')) {
-      const cb = e.target.closest('.habit-checkbox');
-      const habitId = cb.getAttribute('data-id');
-      const isAlreadyChecked = !!trackerState.checkedMap[habitId];
-
-      if (isAlreadyChecked) {
-        e.preventDefault();
+      if (!title) {
+        input.focus();
+        showToast('Tuliskan nama target kebiasaanmu dulu', '✍️');
         return;
       }
 
-      e.preventDefault();
-      const all = getAllHabits();
-      const habit = all.find(h => h.id === habitId);
-      const title = habit ? habit.title : 'kebiasaan ini';
-
-      openConfirmModal(habitId, title);
-    }
-  });
-
-  /* ----- 7.10 Helper Sanitasi Output HTML (hindari XSS) ----- */
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
-
-  /* ----- 7.11 Render Daftar Kebiasaan ----- */
-  function renderHabitList() {
-    const all = getAllHabits();
-    const filtered = all.filter(h => {
-      if (currentCategory === 'Semua') return true;
-      return h.category === currentCategory;
-    });
-
-    habitList.innerHTML = '';
-
-    if (filtered.length === 0) {
-      habitList.insertAdjacentHTML('beforeend', '<div class="empty-habit-msg">Tidak ada kebiasaan untuk kategori "' + escapeHtml(currentCategory) + '".</div>');
-      return;
+      customHabits.push({
+        id: 'cust_' + Date.now(),
+        title: title,
+        category: cat,
+        isDefault: false
+      });
+      saveCustomHabits();
+      input.value = '';
+      showToast('Target baru berhasil ditambahkan!', '🎯');
+      playUiSound('success');
+      renderAll();
     }
 
-    filtered.forEach(h => {
-      const isDone = !!trackerState.checkedMap[h.id];
-      const catLabel = h.category;
-      const deleteBtnHtml = (!h.isDefault && !isDone) ? '<button class="btn-delete-habit" data-id="' + h.id + '" title="Hapus kebiasaan">🗑️</button>' : '';
-      const lockTagHtml = isDone ? '<span class="locked-tag">🔒 Terkunci</span>' : '';
+    const addHabitBtn = document.getElementById('addHabitBtn');
+    if (addHabitBtn) addHabitBtn.addEventListener('click', addHabit);
 
-      const itemHtml = `
-        <div class="habit-item ${isDone ? 'done' : ''}" data-id="${h.id}">
-          <div class="habit-left">
-            <input type="checkbox" class="habit-checkbox" data-id="${h.id}" ${isDone ? 'checked disabled' : ''}>
-            <span class="habit-text">${escapeHtml(h.title)}</span>
-          </div>
-          <div class="habit-right">
-            <span class="category-tag">${escapeHtml(catLabel)}</span>
-            ${lockTagHtml}
-            ${deleteBtnHtml}
-          </div>
-        </div>
-      `;
-      habitList.insertAdjacentHTML('beforeend', itemHtml);
-    });
-  }
+    const newHabitInput = document.getElementById('newHabitInput');
+    if (newHabitInput) {
+      newHabitInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') addHabit();
+      });
+    }
 
-  /* ----- 7.12 Update UI Statistik (progress %, streak card, status badge) ----- */
-  function updateHabitUI() {
-    const all = getAllHabits();
-    const totalCount = all.length;
-    let doneCount = 0;
+    /* Modal Confirmation */
+    let pendingHabitId = null;
+    function openConfirmModal(habitId, title) {
+      pendingHabitId = habitId;
+      const modalText = document.getElementById('confirmModalText');
+      if (modalText) modalText.textContent = `Apakah kamu sudah benar-benar menyelesaikan "${title}" hari ini?`;
+      const modal = document.getElementById('confirmModalOverlay');
+      if (modal) modal.classList.add('show');
+    }
 
-    all.forEach(h => {
-      if (trackerState.checkedMap[h.id]) {
-        doneCount++;
-      }
-    });
+    function closeConfirmModal() {
+      pendingHabitId = null;
+      const modal = document.getElementById('confirmModalOverlay');
+      if (modal) modal.classList.remove('show');
+    }
 
-    /* Sync ulang class done / disabled (redundan, aman) */
-    document.querySelectorAll('#habitList .habit-item').forEach(item => {
-      const id = item.getAttribute('data-id');
-      const isChecked = !!trackerState.checkedMap[id];
-      if (isChecked) {
-        item.classList.add('done');
-      } else {
-        item.classList.remove('done');
-      }
-      
-      const cb = item.querySelector('.habit-checkbox');
-      if (cb) {
-        cb.checked = isChecked;
-        if (isChecked) {
-          cb.disabled = true;
+    const cancelBtn = document.getElementById('confirmCancelBtn');
+    if (cancelBtn) cancelBtn.addEventListener('click', closeConfirmModal);
+
+    const okBtn = document.getElementById('confirmOkBtn');
+    if (okBtn) {
+      okBtn.addEventListener('click', function () {
+        if (pendingHabitId) {
+          trackerState.checkedMap[pendingHabitId] = true;
+          saveTrackerState();
+          showToast('Kebiasaan berhasil dicentang & terkunci!', '✅');
+          playUiSound('success');
+          renderAll();
         }
+        closeConfirmModal();
+      });
+    }
+
+    const modalOverlay = document.getElementById('confirmModalOverlay');
+    if (modalOverlay) {
+      modalOverlay.addEventListener('click', function (e) {
+        if (e.target === modalOverlay) closeConfirmModal();
+      });
+    }
+
+    habitList.addEventListener('click', function (e) {
+      const deleteBtn = e.target.closest('.btn-delete-habit');
+      if (deleteBtn) {
+        const id = deleteBtn.getAttribute('data-id');
+        customHabits = customHabits.filter(h => h.id !== id);
+        delete trackerState.checkedMap[id];
+        saveCustomHabits();
+        saveTrackerState();
+        showToast('Target berhasil dihapus', '🗑️');
+        renderAll();
+        return;
+      }
+
+      const cb = e.target.closest('.habit-checkbox');
+      if (cb) {
+        const id = cb.getAttribute('data-id');
+        if (trackerState.checkedMap[id]) {
+          e.preventDefault();
+          return;
+        }
+        e.preventDefault();
+        const habit = getAllHabits().find(h => h.id === id);
+        openConfirmModal(id, habit ? habit.title : 'kebiasaan ini');
       }
     });
 
-    const completedSummary = document.getElementById('completedSummary');
-    if (completedSummary) {
-      completedSummary.textContent = doneCount + ' dari ' + totalCount;
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
     }
 
-    /* --- Badge Streak + Card Aktif --- */
-    const isMin4Reached = doneCount >= 4;
+    function renderHabitList() {
+      const all = getAllHabits();
+      const filtered = all.filter(h => currentCategory === 'Semua' || h.category === currentCategory);
+      habitList.innerHTML = '';
 
-    const targetStatusBadge = document.getElementById('targetStatusBadge');
-    const streakBadge = document.getElementById('streakBadge');
-    const streakCard = document.getElementById('streakCard');
-    const streakCount = document.getElementById('streakCount');
-
-    if (isMin4Reached) {
-      if (!trackerState.celebratedStreakPeriod || trackerState.celebratedStreakPeriod !== trackerState.lastResetPeriod) {
-        trackerState.celebratedStreakPeriod = trackerState.lastResetPeriod;
-        saveTrackerState();
-        setTimeout(function () {
-          launchConfetti();
-          showToast('Selamat! Target 4+ Harian Tercapai! Streak Hari Ini Aktif 🔥', '🔥');
-        }, 300);
+      if (filtered.length === 0) {
+        habitList.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--text-dim); font-size: 0.92rem;">Belum ada target pada kategori "${escapeHtml(currentCategory)}".</div>`;
+        return;
       }
-      if(targetStatusBadge) { targetStatusBadge.textContent = '✅ Target Min. 4 Reached!'; targetStatusBadge.classList.add('active-streak'); }
-      if(streakBadge) { streakBadge.textContent = '🔥 Active Hari Ini'; streakBadge.classList.add('active-streak'); }
-      if(streakCard) streakCard.classList.add('active-streak-card');
 
-      const activeStreak = (trackerState.streak || 0) + 1;
-      if(streakCount) streakCount.textContent = activeStreak;
-    } else {
-      if(targetStatusBadge) { targetStatusBadge.textContent = 'Minimal 4 untuk Streak (' + doneCount + '/4)'; targetStatusBadge.classList.remove('active-streak'); }
-      if(streakBadge) { streakBadge.textContent = 'Min. 4 Centang'; streakBadge.classList.remove('active-streak'); }
-      if(streakCard) streakCard.classList.remove('active-streak-card');
+      filtered.forEach(h => {
+        const isDone = !!trackerState.checkedMap[h.id];
+        const deleteBtnHtml = (!h.isDefault && !isDone) ? `<button class="btn-delete-habit" data-id="${h.id}" title="Hapus target" style="background: transparent; border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; cursor: pointer; color: var(--text-dim);">🗑️</button>` : '';
+        const lockTag = isDone ? `<span style="font-size: 0.72rem; font-weight: 700; color: var(--accent-2); background: color-mix(in srgb, var(--accent-2) 15%, transparent); padding: 3px 9px; border-radius: 9999px;">🔒 Terkunci</span>` : '';
 
-      const baseStreak = trackerState.streak || 0;
-      if(streakCount) streakCount.textContent = baseStreak;
+        habitList.insertAdjacentHTML('beforeend', `
+          <div class="habit-item ${isDone ? 'done' : ''}" data-id="${h.id}">
+            <div class="habit-left">
+              <input type="checkbox" class="habit-checkbox" data-id="${h.id}" ${isDone ? 'checked disabled' : ''}>
+              <span class="habit-text">${escapeHtml(h.title)}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+              <span style="font-size: 0.72rem; font-weight: 600; color: var(--text-dim); background: var(--surface-2); padding: 3px 9px; border-radius: 9999px; border: 1px solid var(--border);">${escapeHtml(h.category)}</span>
+              ${lockTag}
+              ${deleteBtnHtml}
+            </div>
+          </div>
+        `);
+      });
     }
 
-    /* --- Progress Bar Persentase --- */
-    const percent = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
-    
-    const habitProgressText = document.getElementById('habitProgressText');
-    const habitPercentText = document.getElementById('habitPercentText');
-    const habitProgressFill = document.getElementById('habitProgressFill');
-    
-    if(habitProgressText) habitProgressText.textContent = doneCount + ' dari ' + totalCount + ' selesai hari ini';
-    if(habitPercentText) habitPercentText.textContent = percent + '%';
-    if(habitProgressFill) habitProgressFill.style.width = percent + '%';
+    function updateHabitUI() {
+      const all = getAllHabits();
+      const total = all.length;
+      let done = 0;
+      all.forEach(h => {
+        if (trackerState.checkedMap[h.id]) done++;
+      });
+
+      const summary = document.getElementById('completedSummary');
+      if (summary) summary.textContent = `${done} dari ${total}`;
+
+      const streakCountEl = document.getElementById('streakCount');
+      const streakBadge = document.getElementById('streakBadge');
+      const targetBadge = document.getElementById('targetStatusBadge');
+
+      if (done >= 4) {
+        if (streakBadge) {
+          streakBadge.textContent = '🔥 Active Hari Ini';
+          streakBadge.style.color = '#ff9800';
+        }
+        if (targetBadge) {
+          targetBadge.textContent = '✅ Target Min. 4 Tercapai!';
+          targetBadge.style.color = '#249988';
+        }
+        if (streakCountEl) streakCountEl.textContent = (trackerState.streak || 0) + 1;
+      } else {
+        if (streakBadge) {
+          streakBadge.textContent = 'Min. 4 Centang';
+          streakBadge.style.color = '';
+        }
+        if (targetBadge) {
+          targetBadge.textContent = `Minimal 4 untuk Streak (${done}/4)`;
+          targetBadge.style.color = '';
+        }
+        if (streakCountEl) streakCountEl.textContent = trackerState.streak || 0;
+      }
+
+      const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+      const progressText = document.getElementById('habitProgressText');
+      const percentText = document.getElementById('habitPercentText');
+      const progressFill = document.getElementById('habitProgressFill');
+
+      if (progressText) progressText.textContent = `${done} dari ${total} selesai hari ini`;
+      if (percentText) percentText.textContent = `${percent}%`;
+      if (progressFill) progressFill.style.width = `${percent}%`;
+    }
+
+    function renderAll() {
+      checkAndApplyReset();
+      renderHabitList();
+      updateHabitUI();
+    }
+
+    renderAll();
   }
-
-  /* ----- 7.13 Render Semua (shortcut untuk reset / add habit / dll) ----- */
-  function renderAll() {
-    checkAndApplyReset();
-    renderHabitList();
-    updateHabitUI();
-  }
-
-  renderAll();
-
 });
